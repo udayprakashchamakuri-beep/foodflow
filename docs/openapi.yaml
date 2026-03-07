@@ -1,0 +1,132 @@
+openapi: 3.0.3
+info:
+  title: FoodFlow Connect API
+  version: 1.0.0
+  description: Minimal OpenAPI document for the dependency-free MVP.
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Server is healthy
+  /api/auth/register:
+    post:
+      summary: Register a new user
+  /api/auth/login:
+    post:
+      summary: Sign in and create a session cookie
+  /api/auth/logout:
+    post:
+      summary: Clear the active session
+  /api/auth/me:
+    get:
+      summary: Get the current session user
+  /api/leaderboards:
+    get:
+      summary: Fetch home page stats and leaderboards
+  /api/dashboard:
+    get:
+      summary: Fetch role-specific dashboard metrics and recent activity
+  /api/items:
+    get:
+      summary: List provider items or discoverable items by audience
+    post:
+      summary: Create a provider item
+  /api/items/{itemId}:
+    get:
+      summary: Fetch item details
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+    put:
+      summary: Update a provider item
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+  /api/items/{itemId}/status:
+    patch:
+      summary: Update item availability status
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+  /api/requests:
+    get:
+      summary: List NGO requests relevant to the current user
+    post:
+      summary: Create an NGO request for an item
+  /api/requests/{requestId}:
+    patch:
+      summary: Update request workflow status
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: integer
+  /api/requests/{requestId}/messages:
+    get:
+      summary: Get the coordination thread for a request
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: integer
+    post:
+      summary: Add a message to a request thread
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: integer
+  /api/cart:
+    get:
+      summary: Fetch the persistent consumer cart
+  /api/cart/items:
+    post:
+      summary: Add or replace a cart item quantity
+  /api/cart/items/{itemId}:
+    patch:
+      summary: Update a cart item quantity
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+    delete:
+      summary: Remove an item from the cart
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+  /api/reservations:
+    get:
+      summary: List reservations for the current provider or consumer
+  /api/reservations/checkout:
+    post:
+      summary: Convert cart items into reservations
+  /api/reservations/{reservationId}:
+    patch:
+      summary: Mark a reservation collected or cancelled
+      parameters:
+        - in: path
+          name: reservationId
+          required: true
+          schema:
+            type: integer
