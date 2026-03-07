@@ -1608,16 +1608,6 @@ function renderTopbar() {
         </span>
       </a>
       <nav class="top-actions">
-        <button
-          class="shortcut-chip"
-          type="button"
-          data-action="toggle-shortcuts"
-          aria-haspopup="dialog"
-          aria-expanded="${state.shortcutsOpen ? "true" : "false"}"
-        >
-          Shortcuts
-          <kbd>?</kbd>
-        </button>
         ${
           state.me
             ? `
