@@ -19,15 +19,17 @@ FoodFlow Connect is a role-based food rescue web application for providers, NGOs
 
 ## Deployment
 
-The app is now deployment-ready for Render with Docker and a persistent disk.
+The app supports two Render deployment modes.
 
-- [Dockerfile](C:/Users/udayp/.picoclaw/workspace/my_web_app/Dockerfile): container image for the app
-- [render.yaml](C:/Users/udayp/.picoclaw/workspace/my_web_app/render.yaml): Render service blueprint with a mounted disk at `/app/data`
-- [server.js](C:/Users/udayp/.picoclaw/workspace/my_web_app/server.js): now supports `DATA_DIR` and `DB_PATH` environment overrides
+- [render.yaml](C:/Users/udayp/.picoclaw/workspace/my_web_app/render.yaml): paid/stable deploy with a persistent disk mounted at `/app/data`
+- [render-demo.yaml](C:/Users/udayp/.picoclaw/workspace/my_web_app/render-demo.yaml): free demo deploy with ephemeral storage at `/tmp/foodflow-data`
+- [Dockerfile](C:/Users/udayp/.picoclaw/workspace/my_web_app/Dockerfile): container image for both paths
+- [server.js](C:/Users/udayp/.picoclaw/workspace/my_web_app/server.js): supports `DATA_DIR` and `DB_PATH` environment overrides
 
 Important:
 
-- SQLite needs persistent storage. On Render, that means a mounted disk, which is not available on the free web service tier.
+- The free demo path uses SQLite on ephemeral storage. Demo data can reset on restart, redeploy, or service spin-down.
+- The paid path keeps data by mounting a persistent disk.
 - To deploy from Render, you still need this project in a Git repo or a Docker image in a registry.
 ## Demo accounts
 
@@ -61,4 +63,5 @@ Primary tables:
 - Consumer checkout is reservation-only; there is no payment flow in this MVP.
 - Distance filtering uses latitude/longitude if the user profile and listing both have coordinates.
 - The app seeds sample data automatically when the SQLite database is first created.
+
 

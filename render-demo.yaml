@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: foodflow-demo
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    branch: codex/deploy
+    autoDeployTrigger: off
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATA_DIR
+        value: /tmp/foodflow-data
+      - key: PORT
+        value: 10000
