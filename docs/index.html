@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FoodFlow Connect Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-role="guest">
+    <div class="pages-demo-badge">
+      <div>
+        <strong>GitHub Pages Demo</strong>
+        <small>Local demo data is stored in your browser.</small>
+      </div>
+      <button type="button" data-demo-reset>Reset demo</button>
+    </div>
+    <div id="app" class="app-shell">
+      <main class="loading-screen">
+        <div class="loading-card">
+          <div class="loading-spinner"></div>
+          <p>Loading FoodFlow Connect demo...</p>
+        </div>
+      </main>
+    </div>
+    <script>
+      window.__FOODFLOW_DEMO__ = true;
+      document.addEventListener("click", function(event) {
+        if (event.target && event.target.matches("[data-demo-reset]")) {
+          localStorage.removeItem("foodflow-demo-db-v1");
+          localStorage.removeItem("foodflow-demo-session-v1");
+          window.location.hash = "#/";
+          window.location.reload();
+        }
+      });
+    </script>
+    <script src="./app.js" defer></script>
+  </body>
+</html>
