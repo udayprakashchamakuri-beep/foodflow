@@ -639,6 +639,7 @@ h4,
 }
 
 .auth-panel {
+  scroll-margin-top: 7rem;
   background:
     radial-gradient(circle at top left, rgba(var(--accent-rgb), 0.16), transparent 24%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 247, 238, 0.66));

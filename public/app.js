@@ -218,11 +218,7 @@ function renderShortcutDialog() {
   `;
 }
 
-function focusPrimaryShortcutTarget() {
-  const target = document.querySelector(
-    'form[data-form="route-filter"] input[name="search"], form[data-form="login"] input[name="email"], form[data-form="register"] input[name="displayName"], main input:not([type="hidden"]):not([disabled]), main textarea:not([disabled]), main select:not([disabled])'
-  );
-
+function focusElementIfPossible(target) {
   if (!(target instanceof HTMLElement)) {
     return;
   }
@@ -231,6 +227,38 @@ function focusPrimaryShortcutTarget() {
   if (target instanceof HTMLInputElement && typeof target.select === "function") {
     target.select();
   }
+}
+
+function focusAuthField(mode = state.authMode) {
+  const selector =
+    mode === "login"
+      ? 'form[data-form="login"] input[name="email"]'
+      : 'form[data-form="register"] input[name="displayName"]';
+  focusElementIfPossible(document.querySelector(selector));
+}
+
+function scrollToAuthPanel(mode = state.authMode) {
+  const panel = document.querySelector(".auth-panel");
+  if (!(panel instanceof HTMLElement)) {
+    return;
+  }
+
+  panel.scrollIntoView({
+    behavior: motion.reduced ? "auto" : "smooth",
+    block: "start"
+  });
+
+  window.setTimeout(() => {
+    focusAuthField(mode);
+  }, motion.reduced ? 0 : 220);
+}
+
+function focusPrimaryShortcutTarget() {
+  const target = document.querySelector(
+    'form[data-form="route-filter"] input[name="search"], form[data-form="login"] input[name="email"], form[data-form="register"] input[name="displayName"], main input:not([type="hidden"]):not([disabled]), main textarea:not([disabled]), main select:not([disabled])'
+  );
+
+  focusElementIfPossible(target);
 }
 
 function isTypingTarget(target) {
@@ -244,6 +272,7 @@ async function activateGuestShortcut(slot) {
     state.authMode = "register";
     state.shortcutsOpen = false;
     await renderRoute();
+    scrollToAuthPanel("register");
     return true;
   }
 
@@ -251,6 +280,7 @@ async function activateGuestShortcut(slot) {
     state.authMode = "login";
     state.shortcutsOpen = false;
     await renderRoute();
+    scrollToAuthPanel("login");
     return true;
   }
 
@@ -618,7 +648,7 @@ function renderHomePage(data) {
             </div>
             <ol class="leaderboard-list">${ngoRows}</ol>
           </article>
-          <article class="panel-card auth-panel full-span">
+          <article class="panel-card auth-panel full-span" id="auth-panel">
             <div class="auth-switches">
               <button class="${state.authMode === "register" ? "primary-button" : "ghost-button"}" data-action="switch-auth" data-mode="register">Register</button>
               <button class="${state.authMode === "login" ? "primary-button" : "ghost-button"}" data-action="switch-auth" data-mode="login">Sign in</button>
@@ -1198,6 +1228,9 @@ async function handleClick(event) {
       state.authMode = target.dataset.mode || "register";
       state.shortcutsOpen = false;
       await renderRoute();
+      if (!state.me) {
+        scrollToAuthPanel(state.authMode);
+      }
       return;
     }
 
