@@ -880,6 +880,107 @@ h4,
     scale(1);
 }
 
+.shortcut-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.72rem 0.92rem;
+  border: 1px solid rgba(var(--accent-rgb), 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--text);
+  box-shadow: 0 12px 26px rgba(22, 29, 26, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.shortcut-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 32px rgba(22, 29, 26, 0.12);
+}
+
+.shortcut-chip kbd,
+.shortcut-row kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.7rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--accent-rgb), 0.16);
+  background: rgba(var(--accent-rgb), 0.08);
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.shortcut-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.shortcut-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  border-radius: 0;
+  background: rgba(16, 23, 20, 0.4);
+  backdrop-filter: blur(8px);
+}
+
+.shortcut-dialog {
+  position: relative;
+  width: min(92vw, 580px);
+  padding: 1.35rem;
+  border-radius: 28px;
+  background: rgba(255, 251, 245, 0.84);
+  box-shadow: var(--shadow-deep);
+}
+
+.shortcut-dialog:focus {
+  outline: none;
+}
+
+.shortcut-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.shortcut-copy {
+  margin: 0 0 1rem;
+  color: var(--muted);
+}
+
+.shortcut-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(var(--accent-rgb), 0.08);
+}
+
+.shortcut-row span {
+  color: var(--text);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -951,6 +1052,12 @@ h4,
 
   .brand strong {
     font-size: 1.05rem;
+  }
+
+  .shortcut-head,
+  .shortcut-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .hero-card h1,

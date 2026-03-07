@@ -2,7 +2,8 @@ const ROOT = document.getElementById("app");
 const state = {
   me: null,
   flash: null,
-  authMode: "register"
+  authMode: "register",
+  shortcutsOpen: false
 };
 
 const motion = {
@@ -1363,6 +1364,7 @@ function buildHash(role, page = "home", params = {}) {
 }
 
 function redirectForRole(role = state.me?.role) {
+  state.shortcutsOpen = false;
   if (!role) {
     location.hash = "#/";
     return;
@@ -1391,6 +1393,180 @@ function renderMetricGrid(metrics) {
   `;
 }
 
+function getShortcutEntries() {
+  const common = [
+    { keys: "?", label: "Open or close shortcuts" },
+    { keys: "/", label: "Focus search or the first input" }
+  ];
+
+  if (!state.me?.role) {
+    return common.concat([
+      { keys: "Alt+1", label: "Open register form" },
+      { keys: "Alt+2", label: "Open sign-in form" },
+      { keys: "Alt+3", label: "Use provider demo" },
+      { keys: "Alt+4", label: "Use NGO demo" },
+      { keys: "Alt+5", label: "Use consumer demo" }
+    ]);
+  }
+
+  return common.concat(
+    NAV_ITEMS[state.me.role].map(([page, label], index) => ({
+      keys: `Alt+${index + 1}`,
+      label: `Go to ${label}`
+    }))
+  );
+}
+
+function renderShortcutDialog() {
+  if (!state.shortcutsOpen) {
+    return "";
+  }
+
+  const rows = getShortcutEntries()
+    .map(
+      (entry) => `
+        <li class="shortcut-row">
+          <kbd>${escapeHtml(entry.keys)}</kbd>
+          <span>${escapeHtml(entry.label)}</span>
+        </li>
+      `
+    )
+    .join("");
+
+  return `
+    <div class="shortcut-overlay">
+      <button class="shortcut-backdrop" type="button" data-action="close-shortcuts" aria-label="Close shortcuts"></button>
+      <section
+        class="shortcut-dialog glass-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="shortcut-title"
+        tabindex="-1"
+      >
+        <div class="shortcut-head">
+          <div>
+            <p class="eyebrow">Keyboard shortcuts</p>
+            <h2 id="shortcut-title">Fast navigation</h2>
+          </div>
+          <button class="ghost-button" type="button" data-action="close-shortcuts">Close</button>
+        </div>
+        <p class="shortcut-copy">Shortcuts stay disabled while you are typing inside a form field.</p>
+        <ul class="shortcut-list">${rows}</ul>
+      </section>
+    </div>
+  `;
+}
+
+function focusPrimaryShortcutTarget() {
+  const target = document.querySelector(
+    'form[data-form="route-filter"] input[name="search"], form[data-form="login"] input[name="email"], form[data-form="register"] input[name="displayName"], main input:not([type="hidden"]):not([disabled]), main textarea:not([disabled]), main select:not([disabled])'
+  );
+
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  target.focus();
+  if (target instanceof HTMLInputElement && typeof target.select === "function") {
+    target.select();
+  }
+}
+
+function isTypingTarget(target) {
+  return target instanceof HTMLElement
+    ? Boolean(target.closest('input, textarea, select, [contenteditable="true"]'))
+    : false;
+}
+
+async function activateGuestShortcut(slot) {
+  if (slot === 1) {
+    state.authMode = "register";
+    state.shortcutsOpen = false;
+    await renderRoute();
+    return true;
+  }
+
+  if (slot === 2) {
+    state.authMode = "login";
+    state.shortcutsOpen = false;
+    await renderRoute();
+    return true;
+  }
+
+  const demoRole = { 3: "provider", 4: "ngo", 5: "consumer" }[slot];
+  if (!demoRole) {
+    return false;
+  }
+
+  await signInDemoRole(demoRole);
+  return true;
+}
+
+async function activateRoleShortcut(slot) {
+  const items = NAV_ITEMS[state.me?.role] || [];
+  const target = items[slot - 1];
+  if (!target) {
+    return false;
+  }
+
+  state.shortcutsOpen = false;
+  location.hash = buildHash(state.me.role, target[0]);
+  return true;
+}
+
+function focusShortcutDialogIfNeeded() {
+  const shortcutDialog = document.querySelector(".shortcut-dialog");
+  if (shortcutDialog instanceof HTMLElement) {
+    shortcutDialog.focus();
+  }
+}
+
+async function handleGlobalKeydown(event) {
+  if (event.defaultPrevented) {
+    return;
+  }
+
+  if (event.key === "Escape" && state.shortcutsOpen) {
+    event.preventDefault();
+    state.shortcutsOpen = false;
+    await renderRoute();
+    return;
+  }
+
+  if (isTypingTarget(event.target)) {
+    return;
+  }
+
+  if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key === "?") {
+    event.preventDefault();
+    state.shortcutsOpen = !state.shortcutsOpen;
+    await renderRoute();
+    return;
+  }
+
+  if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key === "/") {
+    event.preventDefault();
+    focusPrimaryShortcutTarget();
+    return;
+  }
+
+  if (!event.altKey || event.ctrlKey || event.metaKey) {
+    return;
+  }
+
+  const slot = Number(event.key);
+  if (!Number.isInteger(slot) || slot <= 0) {
+    return;
+  }
+
+  event.preventDefault();
+  if (state.me) {
+    await activateRoleShortcut(slot);
+  } else {
+    await activateGuestShortcut(slot);
+  }
+}
+
 function renderTopbar() {
   return `
     <header class="topbar glass-bar">
@@ -1402,6 +1578,16 @@ function renderTopbar() {
         </span>
       </a>
       <nav class="top-actions">
+        <button
+          class="shortcut-chip"
+          type="button"
+          data-action="toggle-shortcuts"
+          aria-haspopup="dialog"
+          aria-expanded="${state.shortcutsOpen ? "true" : "false"}"
+        >
+          Shortcuts
+          <kbd>?</kbd>
+        </button>
         ${
           state.me
             ? `
@@ -1445,6 +1631,7 @@ function renderShell(role, page, title, content) {
   return `
     <div class="app-shell">
       ${renderTopbar()}
+      ${renderShortcutDialog()}
       ${consumeFlash()}
       <div class="dashboard-layout dashboard-canvas">
         ${renderSidebar(role, page)}
@@ -1623,6 +1810,7 @@ function renderHomePage(data) {
   return `
     <div class="app-shell">
       ${renderTopbar()}
+      ${renderShortcutDialog()}
       ${consumeFlash()}
       <main class="home-layout home-canvas">
         <section class="hero-card hero-stage">
@@ -2003,6 +2191,7 @@ async function renderRoute() {
       ROOT.innerHTML = renderHomePage(data);
       syncRoleFieldVisibility();
       hydrateVisualEnhancements();
+      focusShortcutDialogIfNeeded();
       return;
     }
 
@@ -2019,11 +2208,12 @@ async function renderRoute() {
       ROOT.innerHTML = await renderConsumerPage(route);
     }
   } catch (error) {
-    ROOT.innerHTML = `<div class="app-shell">${renderTopbar()}${consumeFlash()}<main class="home-layout home-canvas">${renderEmptyCard("Something went wrong", error.message)}</main></div>`;
+    ROOT.innerHTML = `<div class="app-shell">${renderTopbar()}${renderShortcutDialog()}${consumeFlash()}<main class="home-layout home-canvas">${renderEmptyCard("Something went wrong", error.message)}</main></div>`;
   }
 
   syncRoleFieldVisibility();
   hydrateVisualEnhancements();
+  focusShortcutDialogIfNeeded();
 }
 
 function hydrateVisualEnhancements() {
@@ -2114,6 +2304,19 @@ async function refreshSession() {
   state.me = response.user;
 }
 
+async function signInDemoRole(role) {
+  const demo = DEMO_ACCOUNTS[role];
+  if (!demo) {
+    throw new Error("Demo account not found.");
+  }
+
+  const response = await api("/api/auth/login", { method: "POST", body: demo });
+  state.me = response.user;
+  state.shortcutsOpen = false;
+  setFlash(`Signed in as ${role} demo.`);
+  redirectForRole();
+}
+
 async function handleSubmit(event) {
   const form = event.target.closest("form[data-form]");
   if (!form) {
@@ -2145,6 +2348,7 @@ async function handleSubmit(event) {
     if (form.dataset.form === "route-filter") {
       const role = form.dataset.role;
       const page = form.dataset.page;
+      state.shortcutsOpen = false;
       location.hash = buildHash(role, page, data);
       return;
     }
@@ -2215,24 +2419,36 @@ async function handleClick(event) {
   const action = target.dataset.action;
 
   try {
+    if (action === "toggle-shortcuts") {
+      state.shortcutsOpen = !state.shortcutsOpen;
+      await renderRoute();
+      return;
+    }
+
+    if (action === "close-shortcuts") {
+      if (state.shortcutsOpen) {
+        state.shortcutsOpen = false;
+        await renderRoute();
+      }
+      return;
+    }
+
     if (action === "switch-auth") {
       state.authMode = target.dataset.mode || "register";
+      state.shortcutsOpen = false;
       await renderRoute();
       return;
     }
 
     if (action === "demo-login") {
-      const demo = DEMO_ACCOUNTS[target.dataset.role];
-      const response = await api("/api/auth/login", { method: "POST", body: demo });
-      state.me = response.user;
-      setFlash(`Signed in as ${target.dataset.role} demo.`);
-      redirectForRole();
+      await signInDemoRole(target.dataset.role);
       return;
     }
 
     if (action === "logout") {
       await api("/api/auth/logout", { method: "POST" });
       state.me = null;
+      state.shortcutsOpen = false;
       setFlash("Signed out.");
       location.hash = "#/";
       await renderRoute();
@@ -2274,7 +2490,11 @@ async function handleClick(event) {
 async function bootstrap() {
   document.addEventListener("submit", handleSubmit);
   document.addEventListener("click", handleClick);
-  window.addEventListener("hashchange", renderRoute);
+  document.addEventListener("keydown", handleGlobalKeydown);
+  window.addEventListener("hashchange", async () => {
+    state.shortcutsOpen = false;
+    await renderRoute();
+  });
   document.addEventListener("change", (event) => {
     if (event.target && event.target.id === "register-role") {
       syncRoleFieldVisibility();
