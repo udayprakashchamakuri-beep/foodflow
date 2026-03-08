@@ -409,6 +409,28 @@ function renderSidebar(role, currentPage) {
 }
 
 function renderShell(role, page, title, content) {
+  const roleNotice =
+    role === "consumer"
+      ? `
+          <section class="consumer-disclaimer panel-card" aria-label="Food safety notice">
+            <div class="consumer-disclaimer-copy">
+              <p class="eyebrow">Important notice</p>
+              <h2>Some consumer listings may be close to expiry.</h2>
+              <p>
+                Please check the expiry date, packaging condition, smell, and storage guidance before eating.
+                Buy only what you can consume quickly, refrigerate or store it correctly, and do not eat anything that seems unsafe.
+              </p>
+            </div>
+            <div class="consumer-disclaimer-points" aria-hidden="true">
+              <span>Check expiry</span>
+              <span>Store correctly</span>
+              <span>Eat promptly</span>
+              <span>If unsure, skip it</span>
+            </div>
+          </section>
+        `
+      : "";
+
   return `
     <div class="app-shell">
       ${renderTopbar()}
@@ -423,6 +445,7 @@ function renderShell(role, page, title, content) {
               <h1>${escapeHtml(title)}</h1>
             </div>
           </section>
+          ${roleNotice}
           ${content}
         </main>
       </div>
@@ -1300,6 +1323,7 @@ async function bootstrap() {
 }
 
 bootstrap();
+
 
 
 
