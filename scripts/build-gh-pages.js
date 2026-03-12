@@ -5,13 +5,14 @@ const ROOT = process.cwd();
 const PUBLIC_DIR = path.join(ROOT, "public");
 const DOCS_DIR = path.join(ROOT, "docs");
 
-const DEMO_STORAGE_KEY = "foodflow-demo-db-v4";
-const DEMO_SESSION_KEY = "foodflow-demo-session-v4";
+const DEMO_STORAGE_KEY = "foodflow-demo-db-v5";
+const DEMO_SESSION_KEY = "foodflow-demo-session-v5";
 
 function buildDemoApiSource() {
   return String.raw`const DEMO_STORAGE_KEY = "${DEMO_STORAGE_KEY}";
 const DEMO_SESSION_KEY = "${DEMO_SESSION_KEY}";
-const DEMO_VERSION = 4;
+const DEMO_VERSION = 5;
+const DEMO_LEGACY_STORAGE_KEYS = ["foodflow-demo-db-v3", "foodflow-demo-session-v3", "foodflow-demo-db-v4", "foodflow-demo-session-v4"];
 
 function demoNowIso() {
   return new Date().toISOString();
@@ -370,7 +371,31 @@ function createDemoSeed() {
   };
 }
 
+function clearLegacyDemoStorage() {
+  DEMO_LEGACY_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+}
+
+function sanitizeDemoStoreForSave(store) {
+  const sanitized = demoClone(store);
+  sanitized.users = (sanitized.users || []).map((user) => ({
+    ...user,
+    certificateUrl:
+      typeof user.certificateUrl === "string" && user.certificateUrl.startsWith("data:")
+        ? DEMO_CERTIFICATE_PLACEHOLDER_PREFIX + encodeURIComponent("certificate")
+        : user.certificateUrl
+  }));
+  return sanitized;
+}
+
+function isDemoQuotaError(error) {
+  return Boolean(
+    error &&
+      (error.name === "QuotaExceededError" || error.name === "NS_ERROR_DOM_QUOTA_REACHED" || error.code === 22 || error.code === 1014)
+  );
+}
+
 function loadDemoStore() {
+  clearLegacyDemoStorage();
   const raw = localStorage.getItem(DEMO_STORAGE_KEY);
   if (!raw) {
     const seeded = createDemoSeed();
@@ -394,7 +419,14 @@ function loadDemoStore() {
 }
 
 function saveDemoStore(store) {
-  localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(store));
+  try {
+    localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(sanitizeDemoStoreForSave(store)));
+  } catch (error) {
+    if (isDemoQuotaError(error)) {
+      throw new Error("Demo browser storage is full. Use smaller uploads or hosted image URLs, then reset the demo and try again.");
+    }
+    throw error;
+  }
 }
 
 function getDemoSessionUserId() {
@@ -1406,8 +1438,9 @@ function buildPagesIndex() {
       window.__FOODFLOW_DEMO__ = true;
       document.addEventListener("click", function(event) {
         if (event.target && event.target.matches("[data-demo-reset]")) {
-          localStorage.removeItem("${DEMO_STORAGE_KEY}");
-          localStorage.removeItem("${DEMO_SESSION_KEY}");
+          ["${DEMO_STORAGE_KEY}", "${DEMO_SESSION_KEY}", "foodflow-demo-db-v3", "foodflow-demo-session-v3", "foodflow-demo-db-v4", "foodflow-demo-session-v4"].forEach(function(key) {
+            localStorage.removeItem(key);
+          });
           window.location.hash = "#/";
           window.location.reload();
         }

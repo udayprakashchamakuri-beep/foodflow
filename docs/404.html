@@ -26,8 +26,9 @@
       window.__FOODFLOW_DEMO__ = true;
       document.addEventListener("click", function(event) {
         if (event.target && event.target.matches("[data-demo-reset]")) {
-          localStorage.removeItem("foodflow-demo-db-v4");
-          localStorage.removeItem("foodflow-demo-session-v4");
+          ["foodflow-demo-db-v5", "foodflow-demo-session-v5", "foodflow-demo-db-v3", "foodflow-demo-session-v3", "foodflow-demo-db-v4", "foodflow-demo-session-v4"].forEach(function(key) {
+            localStorage.removeItem(key);
+          });
           window.location.hash = "#/";
           window.location.reload();
         }

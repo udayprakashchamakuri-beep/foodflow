@@ -114,25 +114,20 @@ function formatMoney(value) {
     : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
 }
 
+const DEMO_IMAGE_MAX_DIMENSION = 960;
+const DEMO_IMAGE_QUALITY = 0.72;
+const DEMO_CERTIFICATE_PLACEHOLDER_PREFIX = "demo-certificate://";
+
+function isDemoMode() {
+  return Boolean(window.__FOODFLOW_DEMO__);
+}
+
 function formatQty(value, unit = "units") {
   return `${Number(value || 0)} ${unit}`;
 }
 
-function readLocalFileAsDataUrl(file, options = {}) {
+function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
-    if (!file) {
-      resolve("");
-      return;
-    }
-
-    const validate = options.validate || ((candidate) => Boolean(candidate.type && candidate.type.startsWith("image/")));
-    const errorMessage = options.errorMessage || "Upload a valid file.";
-
-    if (!validate(file)) {
-      reject(new Error(errorMessage));
-      return;
-    }
-
     const reader = new FileReader();
     reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
     reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
@@ -140,13 +135,87 @@ function readLocalFileAsDataUrl(file, options = {}) {
   });
 }
 
+function loadImageFromDataUrl(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not process the uploaded image."));
+    image.src = dataUrl;
+  });
+}
+
+async function optimizeImageDataUrl(file, options = {}) {
+  const sourceDataUrl = await readFileAsDataUrl(file);
+  const image = await loadImageFromDataUrl(sourceDataUrl);
+  const maxDimension = Number(options.maxDimension || DEMO_IMAGE_MAX_DIMENSION);
+  const quality = typeof options.quality === "number" ? options.quality : DEMO_IMAGE_QUALITY;
+  const sourceWidth = image.naturalWidth || image.width || 1;
+  const sourceHeight = image.naturalHeight || image.height || 1;
+  const largestSide = Math.max(sourceWidth, sourceHeight);
+  const scale = largestSide > maxDimension ? maxDimension / largestSide : 1;
+  const width = Math.max(1, Math.round(sourceWidth * scale));
+  const height = Math.max(1, Math.round(sourceHeight * scale));
+
+  if (!isDemoMode() && scale === 1) {
+    return sourceDataUrl;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return sourceDataUrl;
+  }
+
+  context.drawImage(image, 0, 0, width, height);
+  return canvas.toDataURL(options.outputType || "image/jpeg", quality);
+}
+
+async function readLocalFileAsDataUrl(file, options = {}) {
+  if (!file) {
+    return "";
+  }
+
+  const validate = options.validate || ((candidate) => Boolean(candidate.type && candidate.type.startsWith("image/")));
+  const errorMessage = options.errorMessage || "Upload a valid file.";
+
+  if (!validate(file)) {
+    throw new Error(errorMessage);
+  }
+
+  try {
+    if (file.type && file.type.startsWith("image/") && (isDemoMode() || options.optimizeImages)) {
+      return await optimizeImageDataUrl(file, options);
+    }
+    return await readFileAsDataUrl(file);
+  } catch (error) {
+    if (error instanceof Error && error.message && error.message !== `Could not read ${file.name}.`) {
+      throw error;
+    }
+    throw new Error(`Could not read ${file.name}.`);
+  }
+}
+
 async function resolveProviderImagePayload(form, formData) {
   const imageFile = form.querySelector('input[name="imageFile"]')?.files?.[0];
   const barcodeImageFile = form.querySelector('input[name="barcodeImageFile"]')?.files?.[0];
 
   return {
-    imageUrl: imageFile ? await readLocalFileAsDataUrl(imageFile, { errorMessage: "Upload a valid food image file." }) : String(formData.get("imageUrl") || "").trim(),
-    barcodeImageUrl: barcodeImageFile ? await readLocalFileAsDataUrl(barcodeImageFile, { errorMessage: "Upload a valid barcode image file." }) : String(formData.get("barcodeImageUrl") || "").trim()
+    imageUrl: imageFile
+      ? await readLocalFileAsDataUrl(imageFile, {
+          errorMessage: "Upload a valid food image file.",
+          maxDimension: 1280,
+          quality: 0.76
+        })
+      : String(formData.get("imageUrl") || "").trim(),
+    barcodeImageUrl: barcodeImageFile
+      ? await readLocalFileAsDataUrl(barcodeImageFile, {
+          errorMessage: "Upload a valid barcode image file.",
+          maxDimension: 960,
+          quality: 0.82
+        })
+      : String(formData.get("barcodeImageUrl") || "").trim()
   };
 }
 
@@ -161,6 +230,11 @@ function isCertificateFile(file) {
   );
 }
 
+function buildDemoCertificatePlaceholder(file) {
+  const safeName = encodeURIComponent(file?.name || "certificate");
+  return `${DEMO_CERTIFICATE_PLACEHOLDER_PREFIX}${safeName}`;
+}
+
 async function resolveRegistrationCertificatePayload(form, formData, role) {
   if (!["provider", "ngo"].includes(role)) {
     return { certificateUrl: "" };
@@ -169,10 +243,12 @@ async function resolveRegistrationCertificatePayload(form, formData, role) {
   const certificateFile = form.querySelector('input[name="certificateFile"]')?.files?.[0];
   const certificateUrl = String(formData.get("certificateUrl") || "").trim();
   const uploadedCertificate = certificateFile
-    ? await readLocalFileAsDataUrl(certificateFile, {
-        validate: isCertificateFile,
-        errorMessage: "Upload a valid certificate file in image or PDF format."
-      })
+    ? isDemoMode()
+      ? buildDemoCertificatePlaceholder(certificateFile)
+      : await readLocalFileAsDataUrl(certificateFile, {
+          validate: isCertificateFile,
+          errorMessage: "Upload a valid certificate file in image or PDF format."
+        })
     : "";
 
   const resolvedCertificate = uploadedCertificate || certificateUrl;
@@ -182,7 +258,6 @@ async function resolveRegistrationCertificatePayload(form, formData, role) {
 
   return { certificateUrl: resolvedCertificate };
 }
-
 function setFlash(message, tone = "success") {
   state.flash = { message, tone };
 }
