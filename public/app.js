@@ -790,28 +790,86 @@ function renderReservationCard(reservation, role) {
   `;
 }
 
-function renderHomePage(data) {
-  const providerRows = data.providerLeaderboard
-    .map(
-      (entry, index) => `
-        <li>
-          <span>${index + 1}. ${escapeHtml(entry.name)}</span>
-          <strong>${escapeHtml(String(entry.totalUnits))} units</strong>
-        </li>
-      `
-    )
+function renderLeaderboardInfographic(entries, options = {}) {
+  if (!entries.length) {
+    return renderEmptyCard(options.emptyTitle || "No leaderboard data", options.emptyMessage || "Impact activity will appear here once transactions are completed.");
+  }
+
+  const leader = entries[0];
+  const peakUnits = Math.max(...entries.map((entry) => Number(entry.totalUnits || 0)), 1);
+  const tone = options.tone || "provider";
+  const heroMeta = options.metaFor ? options.metaFor(leader) : "";
+  const rows = entries.slice(0, 5)
+    .map((entry, index) => {
+      const width = Math.max(16, Math.round((Number(entry.totalUnits || 0) / peakUnits) * 100));
+      const meta = options.metaFor ? options.metaFor(entry) : "";
+
+      return `
+        <article class="leaderboard-track-card leaderboard-track-${tone}">
+          <div class="leaderboard-rank-pill">${String(index + 1).padStart(2, "0")}</div>
+          <div class="leaderboard-track-copy">
+            <div class="leaderboard-track-head">
+              <div>
+                <h3>${escapeHtml(entry.name)}</h3>
+                <p>${escapeHtml(meta)}</p>
+              </div>
+              <div class="leaderboard-track-stats">
+                <strong>${escapeHtml(String(entry.totalUnits))}</strong>
+                <span>units</span>
+              </div>
+            </div>
+            <div class="leaderboard-bar" aria-hidden="true"><span style="width: ${width}%"></span></div>
+            <div class="leaderboard-track-foot">
+              <span>${escapeHtml(options.footLabel || "Impact recorded")}</span>
+              <span>${escapeHtml(String(entry.totalTransactions || 0))} actions</span>
+            </div>
+          </div>
+        </article>
+      `;
+    })
     .join("");
 
-  const ngoRows = data.ngoLeaderboard
-    .map(
-      (entry, index) => `
-        <li>
-          <span>${index + 1}. ${escapeHtml(entry.name)}</span>
-          <strong>${escapeHtml(String(entry.totalUnits))} units</strong>
-        </li>
-      `
-    )
-    .join("");
+  return `
+    <div class="leaderboard-infograph leaderboard-${tone}">
+      <section class="leaderboard-hero-card">
+        <div class="leaderboard-hero-mark">#1</div>
+        <div class="leaderboard-hero-copy">
+          <p class="eyebrow">Top impact this cycle</p>
+          <h3>${escapeHtml(leader.name)}</h3>
+          <p>${escapeHtml(heroMeta)}</p>
+        </div>
+        <div class="leaderboard-hero-stats">
+          <div>
+            <span>Units saved</span>
+            <strong>${escapeHtml(String(leader.totalUnits))}</strong>
+          </div>
+          <div>
+            <span>Completed actions</span>
+            <strong>${escapeHtml(String(leader.totalTransactions || 0))}</strong>
+          </div>
+        </div>
+      </section>
+      <div class="leaderboard-track-list">${rows}</div>
+    </div>
+  `;
+}
+
+function renderHomePage(data) {
+  const providerBoard = renderLeaderboardInfographic(data.providerLeaderboard, {
+    tone: "provider",
+    footLabel: "Rescue completions",
+    metaFor: (entry) => `${entry.businessType ? entry.businessType.replace(/\b\w/g, (char) => char.toUpperCase()) : "Provider"} | ${entry.totalTransactions || 0} completed pickups`,
+    emptyTitle: "No provider impact yet",
+    emptyMessage: "Provider rankings will appear after the first completed rescues."
+  });
+
+  const ngoBoard = renderLeaderboardInfographic(data.ngoLeaderboard, {
+    tone: "ngo",
+    footLabel: "Delivery actions",
+    metaFor: (entry) => `${entry.totalTransactions || 0} completed deliveries coordinated`,
+    emptyTitle: "No NGO impact yet",
+    emptyMessage: "NGO rankings will appear after the first confirmed deliveries."
+  });
 
   return `
     <div class="app-shell">
@@ -849,19 +907,19 @@ function renderHomePage(data) {
           </div>
         </section>
         <section class="home-grid">
-          <article class="panel-card">
+          <article class="panel-card leaderboard-shell">
             <div class="panel-head">
               <h2>Provider leaderboard</h2>
               <p>Reward good inventory discipline and completed pickups.</p>
             </div>
-            <ol class="leaderboard-list">${providerRows}</ol>
+            ${providerBoard}
           </article>
-          <article class="panel-card">
+          <article class="panel-card leaderboard-shell">
             <div class="panel-head">
               <h2>NGO leaderboard</h2>
               <p>Highlight teams turning requests into actual deliveries.</p>
             </div>
-            <ol class="leaderboard-list">${ngoRows}</ol>
+            ${ngoBoard}
           </article>
           <article class="panel-card auth-panel full-span" id="auth-panel">
             <div class="auth-switches">

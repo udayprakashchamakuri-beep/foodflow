@@ -816,12 +816,177 @@ h4,
   list-style: none;
 }
 
-.leaderboard-list li {
+.leaderboard-infograph {
+  display: grid;
+  gap: 1rem;
+}
+
+.leaderboard-shell {
+  background:
+    radial-gradient(circle at top right, rgba(240, 190, 138, 0.2), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 248, 241, 0.62));
+}
+
+.leaderboard-hero-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.1rem;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  background:
+    radial-gradient(circle at 15% 20%, rgba(var(--accent-rgb), 0.18), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(245, 236, 226, 0.7));
+  box-shadow: 0 18px 38px rgba(26, 34, 30, 0.08);
+}
+
+.leaderboard-hero-mark {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--accent-strong);
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.4) 42%, transparent 43%),
+    linear-gradient(160deg, rgba(var(--accent-rgb), 0.24), rgba(217, 137, 74, 0.16));
+  border: 1px solid rgba(var(--accent-rgb), 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.leaderboard-hero-copy h3 {
+  margin: 0;
+  font-size: 1.55rem;
+}
+
+.leaderboard-hero-copy p:last-child {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+}
+
+.leaderboard-hero-stats {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 10rem;
+}
+
+.leaderboard-hero-stats div {
+  padding: 0.75rem 0.9rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.56);
+}
+
+.leaderboard-hero-stats span,
+.leaderboard-track-stats span,
+.leaderboard-track-foot {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.leaderboard-hero-stats strong {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 1.45rem;
+}
+
+.leaderboard-track-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.leaderboard-track-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: stretch;
+  padding: 1rem;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(246, 239, 232, 0.66));
+}
+
+.leaderboard-rank-pill {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  border-radius: 18px;
+  font-weight: 700;
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent-strong);
+}
+
+.leaderboard-track-copy {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.leaderboard-track-head {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem 0;
-  border-bottom: 1px solid rgba(20, 35, 30, 0.08);
+  align-items: start;
+}
+
+.leaderboard-track-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.leaderboard-track-head p {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+}
+
+.leaderboard-track-stats {
+  text-align: right;
+}
+
+.leaderboard-track-stats strong {
+  display: block;
+  font-size: 1.25rem;
+}
+
+.leaderboard-bar {
+  position: relative;
+  height: 0.7rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(30, 42, 37, 0.08);
+}
+
+.leaderboard-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.85), rgba(217, 137, 74, 0.72));
+  box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.22);
+}
+
+.leaderboard-track-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.leaderboard-ngo .leaderboard-hero-card {
+  background:
+    radial-gradient(circle at 15% 20%, rgba(104, 156, 140, 0.18), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(235, 245, 239, 0.68));
+}
+
+.leaderboard-track-ngo .leaderboard-bar span {
+  background: linear-gradient(90deg, rgba(73, 141, 121, 0.82), rgba(113, 168, 150, 0.72));
+}
+
+.leaderboard-track-ngo .leaderboard-rank-pill {
+  background: rgba(73, 141, 121, 0.12);
+  color: rgb(44, 96, 82);
 }
 
 .auth-panel {
@@ -1210,6 +1375,20 @@ h4,
   .metric-grid {
     grid-template-columns: 1fr;
   }
+
+  .leaderboard-hero-card,
+  .leaderboard-track-head,
+  .leaderboard-track-foot {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .leaderboard-hero-stats {
+    min-width: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
 
   .topbar,
   .home-layout,
