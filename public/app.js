@@ -118,15 +118,18 @@ function formatQty(value, unit = "units") {
   return `${Number(value || 0)} ${unit}`;
 }
 
-function readLocalFileAsDataUrl(file) {
+function readLocalFileAsDataUrl(file, options = {}) {
   return new Promise((resolve, reject) => {
     if (!file) {
       resolve("");
       return;
     }
 
-    if (!file.type || !file.type.startsWith("image/")) {
-      reject(new Error("Upload a valid image file."));
+    const validate = options.validate || ((candidate) => Boolean(candidate.type && candidate.type.startsWith("image/")));
+    const errorMessage = options.errorMessage || "Upload a valid file.";
+
+    if (!validate(file)) {
+      reject(new Error(errorMessage));
       return;
     }
 
@@ -142,9 +145,42 @@ async function resolveProviderImagePayload(form, formData) {
   const barcodeImageFile = form.querySelector('input[name="barcodeImageFile"]')?.files?.[0];
 
   return {
-    imageUrl: imageFile ? await readLocalFileAsDataUrl(imageFile) : String(formData.get("imageUrl") || "").trim(),
-    barcodeImageUrl: barcodeImageFile ? await readLocalFileAsDataUrl(barcodeImageFile) : String(formData.get("barcodeImageUrl") || "").trim()
+    imageUrl: imageFile ? await readLocalFileAsDataUrl(imageFile, { errorMessage: "Upload a valid food image file." }) : String(formData.get("imageUrl") || "").trim(),
+    barcodeImageUrl: barcodeImageFile ? await readLocalFileAsDataUrl(barcodeImageFile, { errorMessage: "Upload a valid barcode image file." }) : String(formData.get("barcodeImageUrl") || "").trim()
   };
+}
+
+function isCertificateFile(file) {
+  if (!file) {
+    return false;
+  }
+
+  return Boolean(
+    (file.type && (file.type.startsWith("image/") || file.type === "application/pdf")) ||
+      /\.pdf$/i.test(file.name || "")
+  );
+}
+
+async function resolveRegistrationCertificatePayload(form, formData, role) {
+  if (!["provider", "ngo"].includes(role)) {
+    return { certificateUrl: "" };
+  }
+
+  const certificateFile = form.querySelector('input[name="certificateFile"]')?.files?.[0];
+  const certificateUrl = String(formData.get("certificateUrl") || "").trim();
+  const uploadedCertificate = certificateFile
+    ? await readLocalFileAsDataUrl(certificateFile, {
+        validate: isCertificateFile,
+        errorMessage: "Upload a valid certificate file in image or PDF format."
+      })
+    : "";
+
+  const resolvedCertificate = uploadedCertificate || certificateUrl;
+  if (!resolvedCertificate) {
+    throw new Error("Providers and NGOs must upload a government certificate.");
+  }
+
+  return { certificateUrl: resolvedCertificate };
 }
 
 function setFlash(message, tone = "success") {
@@ -596,6 +632,20 @@ function renderProviderImageFields(item = null) {
     </section>
   `;
 }
+function renderCertificateUploadFields() {
+  return `
+    <section class="verification-only upload-fields hidden">
+      <div class="panel-head compact">
+        <h3>Government certificate</h3>
+        <p>Required for food providers and NGOs. Upload an image or PDF from your device, or paste a hosted certificate URL.</p>
+      </div>
+      <div class="two-column">
+        <label><span>Certificate URL (optional)</span><input name="certificateUrl" type="url" placeholder="https://example.com/certificate.pdf" /></label>
+        <label><span>Certificate from device</span><input name="certificateFile" type="file" accept="image/*,.pdf,application/pdf" /></label>
+      </div>
+    </section>
+  `;
+}
 
 function renderRequestActions(request, role) {
   if (role === "provider") {
@@ -865,6 +915,7 @@ function renderHomePage(data) {
                   <span>Address</span>
                   <input name="address" required />
                 </label>
+                ${renderCertificateUploadFields()}
                 <button class="primary-button" type="submit">Create account</button>
               </form>
               <div class="signin-column">
@@ -1244,13 +1295,21 @@ function syncUnitOptionsForCategory(selectEl = null) {
 function syncRoleFieldVisibility() {
   const roleField = document.getElementById("register-role");
   const providerOnlyFields = document.querySelectorAll(".provider-only");
-  if (!roleField || !providerOnlyFields.length) {
+  const verificationFields = document.querySelectorAll(".verification-only");
+  if (!roleField) {
     return;
   }
 
-  const shouldShow = roleField.value === "provider";
+  const selectedRole = roleField.value;
+  const shouldShowProvider = selectedRole === "provider";
+  const shouldShowVerification = ["provider", "ngo"].includes(selectedRole);
+
   providerOnlyFields.forEach((element) => {
-    element.classList.toggle("hidden", !shouldShow);
+    element.classList.toggle("hidden", !shouldShowProvider);
+  });
+
+  verificationFields.forEach((element) => {
+    element.classList.toggle("hidden", !shouldShowVerification);
   });
 }
 
@@ -1292,8 +1351,13 @@ async function handleSubmit(event) {
     }
 
     if (form.dataset.form === "register") {
-      data.businessType = formData.get("businessType");
-      const response = await api("/api/auth/register", { method: "POST", body: data });
+      const payload = {
+        ...data,
+        businessType: formData.get("businessType")
+      };
+      delete payload.certificateFile;
+      Object.assign(payload, await resolveRegistrationCertificatePayload(form, formData, payload.role));
+      const response = await api("/api/auth/register", { method: "POST", body: payload });
       state.me = response.user;
       setFlash("Account created.");
       redirectForRole();

@@ -5,13 +5,13 @@ const ROOT = process.cwd();
 const PUBLIC_DIR = path.join(ROOT, "public");
 const DOCS_DIR = path.join(ROOT, "docs");
 
-const DEMO_STORAGE_KEY = "foodflow-demo-db-v2";
-const DEMO_SESSION_KEY = "foodflow-demo-session-v2";
+const DEMO_STORAGE_KEY = "foodflow-demo-db-v3";
+const DEMO_SESSION_KEY = "foodflow-demo-session-v3";
 
 function buildDemoApiSource() {
   return String.raw`const DEMO_STORAGE_KEY = "${DEMO_STORAGE_KEY}";
 const DEMO_SESSION_KEY = "${DEMO_SESSION_KEY}";
-const DEMO_VERSION = 2;
+const DEMO_VERSION = 3;
 
 function demoNowIso() {
   return new Date().toISOString();
@@ -421,6 +421,7 @@ function serializeDemoUser(user) {
     phone: user.phone,
     address: user.address,
     businessType: user.businessType,
+    certificateUrl: user.certificateUrl || null,
     latitude: user.latitude,
     longitude: user.longitude
   };
@@ -828,6 +829,9 @@ async function api(path, options = {}) {
     if (body.role === "provider" && !body.businessType) {
       throw new Error("Providers must choose a business type.");
     }
+    if (["provider", "ngo"].includes(body.role) && !String(body.certificateUrl || "").trim()) {
+      throw new Error("Providers and NGOs must upload a government certificate.");
+    }
 
     const user = {
       id: nextDemoId(store, "users"),
@@ -839,6 +843,7 @@ async function api(path, options = {}) {
       phone: String(body.phone).trim(),
       address: String(body.address).trim(),
       businessType: body.role === "provider" ? String(body.businessType).trim() : null,
+      certificateUrl: ["provider", "ngo"].includes(body.role) ? String(body.certificateUrl || "").trim() : null,
       latitude: demoToNumber(body.latitude, null),
       longitude: demoToNumber(body.longitude, null)
     };

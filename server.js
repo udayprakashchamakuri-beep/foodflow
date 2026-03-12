@@ -167,6 +167,7 @@ function serializeUser(user) {
     phone: user.phone,
     address: user.address,
     businessType: user.business_type,
+    certificateUrl: user.certificate_url,
     latitude: user.latitude,
     longitude: user.longitude
   };
@@ -207,6 +208,7 @@ function openDatabase() {
       phone TEXT,
       address TEXT,
       business_type TEXT,
+      certificate_url TEXT,
       latitude REAL,
       longitude REAL,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -335,6 +337,12 @@ function openDatabase() {
     // Column already exists.
   }
 
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN certificate_url TEXT");
+  } catch (_error) {
+    // Column already exists.
+  }
+
   const countRow = db.prepare("SELECT COUNT(*) AS total FROM users").get();
   if (!countRow.total) {
     seedDatabase(db);
@@ -347,8 +355,8 @@ function openDatabase() {
 
 function insertUser(db, user) {
   const statement = db.prepare(`
-    INSERT INTO users (email, password_hash, role, display_name, contact_name, phone, address, business_type, latitude, longitude)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO users (email, password_hash, role, display_name, contact_name, phone, address, business_type, certificate_url, latitude, longitude)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const result = statement.run(
     user.email,
@@ -359,6 +367,7 @@ function insertUser(db, user) {
     user.phone,
     user.address,
     user.businessType || null,
+    user.certificateUrl || null,
     user.latitude ?? null,
     user.longitude ?? null
   );
@@ -1268,6 +1277,7 @@ addRoute("POST", /^\/api\/auth\/register$/, async (req, res, db) => {
   const contactName = String(body.contactName || displayName).trim();
   const phone = String(body.phone || "").trim();
   const address = String(body.address || "").trim();
+  const certificateUrl = String(body.certificateUrl || "").trim();
 
   if (!displayName || !phone || !address) {
     return sendError(res, 400, "Name, phone, and address are required.");
@@ -1277,10 +1287,14 @@ addRoute("POST", /^\/api\/auth\/register$/, async (req, res, db) => {
     return sendError(res, 400, "Providers must choose a business type.");
   }
 
+  if (["provider", "ngo"].includes(role) && !certificateUrl) {
+    return sendError(res, 400, "Providers and NGOs must upload a government certificate.");
+  }
+
   const userId = Number(
     db.prepare(`
-      INSERT INTO users (email, password_hash, role, display_name, contact_name, phone, address, business_type, latitude, longitude)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (email, password_hash, role, display_name, contact_name, phone, address, business_type, certificate_url, latitude, longitude)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       email,
       hashPassword(String(body.password)),
@@ -1290,6 +1304,7 @@ addRoute("POST", /^\/api\/auth\/register$/, async (req, res, db) => {
       phone,
       address,
       role === "provider" ? String(body.businessType).trim() : null,
+      ["provider", "ngo"].includes(role) ? certificateUrl : null,
       toNumber(body.latitude, null),
       toNumber(body.longitude, null)
     ).lastInsertRowid

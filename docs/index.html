@@ -26,8 +26,8 @@
       window.__FOODFLOW_DEMO__ = true;
       document.addEventListener("click", function(event) {
         if (event.target && event.target.matches("[data-demo-reset]")) {
-          localStorage.removeItem("foodflow-demo-db-v2");
-          localStorage.removeItem("foodflow-demo-session-v2");
+          localStorage.removeItem("foodflow-demo-db-v3");
+          localStorage.removeItem("foodflow-demo-session-v3");
           window.location.hash = "#/";
           window.location.reload();
         }
