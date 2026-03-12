@@ -96,27 +96,42 @@ body::after {
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.42), transparent 88%);
   opacity: 0.24;
 }
-
-.cursor-halo {
+.cursor-dot,
+.cursor-ring {
   position: fixed;
   left: var(--cursor-x, -999px);
   top: var(--cursor-y, -999px);
-  width: 260px;
-  height: 260px;
-  border-radius: 50%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.22), rgba(255, 255, 255, 0) 60%);
   pointer-events: none;
-  z-index: 0;
-  opacity: 0.75;
-  mix-blend-mode: soft-light;
-  transition: opacity 0.25s ease;
+  z-index: 9;
+}
+
+.cursor-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-strong);
+  box-shadow: 0 0 0 6px rgba(var(--accent-rgb), 0.14);
+}
+
+.cursor-ring {
+  left: var(--ring-x, -999px);
+  top: var(--ring-y, -999px);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--accent-rgb), 0.45);
+  box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.18);
+  transition: border-color 0.2s ease;
 }
 
 @media (pointer: coarse) {
-  .cursor-halo {
+  .cursor-dot,
+  .cursor-ring {
     display: none;
   }
+}
+
 }
 
 
@@ -1064,70 +1079,13 @@ h4,
     transform: none;
   }
 
-  .cursor-halo {
+  .cursor-dot,
+  .cursor-ring {
     display: none;
   }
 }
 
-@media (max-width: 760px) {
-  .topbar,
-  .page-header,
-  .panel-head,
-  .list-card-head,
-  .summary-strip {
-    flex-direction: column;
-    align-items: stretch;
-  }
 
-  .home-grid,
-  .two-column,
-  .three-column,
-  .compact-grid,
-  .metric-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .topbar,
-  .home-layout,
-  .dashboard-layout,
-  .dashboard-main,
-  .flash {
-    width: calc(100% - 1rem);
-  }
-
-  .topbar {
-    margin: 0.5rem auto 1rem;
-    border-radius: 26px;
-  }
-
-  .home-layout,
-  .dashboard-main {
-    padding-bottom: 2rem;
-  }
-
-  .brand strong {
-    font-size: 1.05rem;
-  }
-
-  .shortcut-head,
-  .shortcut-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .hero-card h1,
-  .page-header h1 {
-    font-size: 2.2rem;
-  }
-
-  .consumer-disclaimer::after {
-    display: none;
-  }
-
-  .consumer-disclaimer-points span {
-    justify-content: flex-start;
-  }
-}
 
 
 

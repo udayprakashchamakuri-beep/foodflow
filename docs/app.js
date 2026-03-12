@@ -12,11 +12,13 @@ const motion = {
 };
 
 
-const cursorHalo = {
+const cursorFx = {
   raf: null,
   x: -999,
   y: -999,
-  enabled: window.matchMedia('(pointer: fine)').matches
+  ringX: -999,
+  ringY: -999,
+  enabled: window.matchMedia("(pointer: fine)").matches
 };
 
 const NAV_ITEMS = {
@@ -2303,41 +2305,59 @@ function hydrateVisualEnhancements() {
   }
 }
 
-function initCursorHalo() {
-  if (motion.reduced || !cursorHalo.enabled) {
+function initCursorFx() {
+  if (motion.reduced || !cursorFx.enabled) {
     return;
   }
 
-  if (document.querySelector(".cursor-halo")) {
+  if (document.querySelector(".cursor-dot")) {
     return;
   }
 
-  const halo = document.createElement("div");
-  halo.className = "cursor-halo";
-  halo.setAttribute("aria-hidden", "true");
-  document.body.appendChild(halo);
+  const dot = document.createElement("div");
+  dot.className = "cursor-dot";
+  dot.setAttribute("aria-hidden", "true");
+
+  const ring = document.createElement("div");
+  ring.className = "cursor-ring";
+  ring.setAttribute("aria-hidden", "true");
+
+  document.body.append(dot, ring);
 
   const update = () => {
-    document.documentElement.style.setProperty("--cursor-x", `${cursorHalo.x}px`);
-    document.documentElement.style.setProperty("--cursor-y", `${cursorHalo.y}px`);
-    cursorHalo.raf = null;
+    const dx = cursorFx.x - cursorFx.ringX;
+    const dy = cursorFx.y - cursorFx.ringY;
+    cursorFx.ringX += dx * 0.18;
+    cursorFx.ringY += dy * 0.18;
+
+    document.documentElement.style.setProperty("--cursor-x", `${cursorFx.x}px`);
+    document.documentElement.style.setProperty("--cursor-y", `${cursorFx.y}px`);
+    document.documentElement.style.setProperty("--ring-x", `${cursorFx.ringX}px`);
+    document.documentElement.style.setProperty("--ring-y", `${cursorFx.ringY}px`);
+    cursorFx.raf = null;
   };
 
   const schedule = () => {
-    if (!cursorHalo.raf) {
-      cursorHalo.raf = requestAnimationFrame(update);
+    if (!cursorFx.raf) {
+      cursorFx.raf = requestAnimationFrame(update);
     }
   };
 
   const handleMove = (event) => {
-    cursorHalo.x = event.clientX;
-    cursorHalo.y = event.clientY;
+    cursorFx.x = event.clientX;
+    cursorFx.y = event.clientY;
+    if (cursorFx.ringX === -999) {
+      cursorFx.ringX = cursorFx.x;
+      cursorFx.ringY = cursorFx.y;
+    }
     schedule();
   };
 
   const handleLeave = () => {
-    cursorHalo.x = -999;
-    cursorHalo.y = -999;
+    cursorFx.x = -999;
+    cursorFx.y = -999;
+    cursorFx.ringX = -999;
+    cursorFx.ringY = -999;
     schedule();
   };
 
@@ -2551,7 +2571,7 @@ async function handleClick(event) {
 }
 
 async function bootstrap() {
-  initCursorHalo();
+  initCursorFx();
   document.addEventListener("submit", handleSubmit);
   document.addEventListener("click", handleClick);
   document.addEventListener("keydown", handleGlobalKeydown);
@@ -2580,6 +2600,8 @@ async function bootstrap() {
 }
 
 bootstrap();
+
+
 
 
 
