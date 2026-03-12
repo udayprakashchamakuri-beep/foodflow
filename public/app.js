@@ -35,9 +35,19 @@ const NAV_ITEMS = {
 };
 
 const DEMO_ACCOUNTS = {
-  provider: { email: "provider@freshplate.demo", password: "demo12345" },
+  provider_restaurant: { email: "provider@freshplate.demo", password: "demo12345" },
+  provider_grocery: { email: "grocer@greenbasket.demo", password: "demo12345" },
+  provider_banquet: { email: "banquet@grandlotus.demo", password: "demo12345" },
   ngo: { email: "ngo@carebridge.demo", password: "demo12345" },
   consumer: { email: "consumer@neighbor.demo", password: "demo12345" }
+};
+
+const DEMO_LABELS = {
+  provider_restaurant: "restaurant provider",
+  provider_grocery: "grocery provider",
+  provider_banquet: "banquet provider",
+  ngo: "NGO",
+  consumer: "consumer"
 };
 
 function escapeHtml(value) {
@@ -164,9 +174,11 @@ function getShortcutEntries() {
     return common.concat([
       { keys: "Alt+1", label: "Open register form" },
       { keys: "Alt+2", label: "Open sign-in form" },
-      { keys: "Alt+3", label: "Use provider demo" },
-      { keys: "Alt+4", label: "Use NGO demo" },
-      { keys: "Alt+5", label: "Use consumer demo" }
+      { keys: "Alt+3", label: "Use restaurant provider demo" },
+      { keys: "Alt+4", label: "Use grocery provider demo" },
+      { keys: "Alt+5", label: "Use banquet provider demo" },
+      { keys: "Alt+6", label: "Use NGO demo" },
+      { keys: "Alt+7", label: "Use consumer demo" }
     ]);
   }
 
@@ -284,7 +296,7 @@ async function activateGuestShortcut(slot) {
     return true;
   }
 
-  const demoRole = { 3: "provider", 4: "ngo", 5: "consumer" }[slot];
+  const demoRole = { 3: "provider_restaurant", 4: "provider_grocery", 5: "provider_banquet", 6: "ngo", 7: "consumer" }[slot];
   if (!demoRole) {
     return false;
   }
@@ -740,9 +752,11 @@ function renderHomePage(data) {
                 </form>
                 <div class="demo-panel">
                   <h4>Demo access</h4>
-                  <button class="ghost-button" data-action="demo-login" data-role="provider">Use provider demo</button>
-                  <button class="ghost-button" data-action="demo-login" data-role="ngo">Use NGO demo</button>
-                  <button class="ghost-button" data-action="demo-login" data-role="consumer">Use consumer demo</button>
+                  <button class="ghost-button" data-action="demo-login" data-role="provider_restaurant">Restaurant provider demo</button>
+                  <button class="ghost-button" data-action="demo-login" data-role="provider_grocery">Grocery provider demo</button>
+                  <button class="ghost-button" data-action="demo-login" data-role="provider_banquet">Banquet provider demo</button>
+                  <button class="ghost-button" data-action="demo-login" data-role="ngo">NGO demo</button>
+                  <button class="ghost-button" data-action="demo-login" data-role="consumer">Consumer demo</button>
                 </div>
               </div>
             </div>
@@ -1117,7 +1131,7 @@ async function signInDemoRole(role) {
   const response = await api("/api/auth/login", { method: "POST", body: demo });
   state.me = response.user;
   state.shortcutsOpen = false;
-  setFlash(`Signed in as ${role} demo.`);
+  setFlash(`Signed in as ${DEMO_LABELS[role] || role} demo.`);
   redirectForRole();
 }
 
@@ -1323,6 +1337,8 @@ async function bootstrap() {
 }
 
 bootstrap();
+
+
 
 
 
