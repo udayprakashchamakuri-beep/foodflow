@@ -50,6 +50,45 @@ const DEMO_LABELS = {
   consumer: "consumer"
 };
 
+const CATEGORY_OPTIONS = [
+  "Prepared Food",
+  "Produce",
+  "Bakery",
+  "Dairy",
+  "Beverages",
+  "Pantry",
+  "Frozen",
+  "Meat & Seafood",
+  "Other"
+];
+
+const UNIT_OPTIONS = {
+  "Prepared Food": ["boxes", "meals", "trays", "packs"],
+  Produce: ["kg", "crates", "bags"],
+  Bakery: ["loaves", "packs", "pieces"],
+  Dairy: ["liters", "packs", "cups"],
+  Beverages: ["bottles", "liters", "cans"],
+  Pantry: ["packs", "bags", "jars"],
+  Frozen: ["packs", "boxes"],
+  "Meat & Seafood": ["kg", "packs"],
+  Other: ["units", "boxes", "packs"]
+};
+
+const DEFAULT_UNITS = ["units", "boxes", "packs", "kg", "liters"];
+
+function getUnitsForCategory(category) {
+  return UNIT_OPTIONS[category] || DEFAULT_UNITS;
+}
+
+function renderOptionList(options, selected) {
+  return options
+    .map((option) => `<option value="${escapeHtml(option)}" ${option === selected ? "selected" : ""}>${escapeHtml(option)}</option>`)
+    .join("");
+}
+
+function renderUnitOptions(category, selected) {
+  return renderOptionList(getUnitsForCategory(category), selected);
+}
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -480,8 +519,13 @@ function renderItemTile(item, mode) {
       ? `href="${buildHash("provider", "inventory", { edit: item.id })}"`
       : `href="${buildHash(mode, mode === "consumer" ? "browse" : "discover", { item: item.id })}"`;
 
+  const imageMarkup = item.imageUrl
+    ? `<div class="item-thumb"><img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.name)} photo" loading="lazy" /></div>`
+    : "";
+
   return `
     <article class="list-card atmospheric-card">
+      ${imageMarkup}
       <div class="list-card-head">
         <div>
           <h3>${escapeHtml(item.name)}</h3>
@@ -573,6 +617,7 @@ function renderRequestCard(request, role) {
 function renderReservationCard(reservation, role) {
   return `
     <article class="list-card atmospheric-card">
+      ${imageMarkup}
       <div class="list-card-head">
         <div>
           <h3>${escapeHtml(reservation.itemName)}</h3>
@@ -725,16 +770,6 @@ function renderHomePage(data) {
                   <span>Address</span>
                   <input name="address" required />
                 </label>
-                <div class="two-column subtle-inputs">
-                  <label>
-                    <span>Latitude (optional)</span>
-                    <input name="latitude" type="number" step="0.0001" />
-                  </label>
-                  <label>
-                    <span>Longitude (optional)</span>
-                    <input name="longitude" type="number" step="0.0001" />
-                  </label>
-                </div>
                 <button class="primary-button" type="submit">Create account</button>
               </form>
               <div class="signin-column">
@@ -779,18 +814,19 @@ function renderProviderInventory(items, editItem, route) {
           <input type="hidden" name="itemId" value="${editItem ? editItem.id : ""}" />
           <div class="two-column">
             <label><span>Item name</span><input name="name" value="${escapeHtml(editItem?.name || "")}" required /></label>
-            <label><span>Category</span><input name="category" value="${escapeHtml(editItem?.category || "Prepared Food")}" required /></label>
+            <label><span>Category</span><select name="category" data-unit-source>${renderOptionList(CATEGORY_OPTIONS, editItem?.category || "Prepared Food")}</select></label>
           </div>
           <label><span>Description</span><textarea name="description" rows="3">${escapeHtml(editItem?.description || "")}</textarea></label>
+          <label><span>Image URL (optional)</span><input name="imageUrl" type="url" value="${escapeHtml(editItem?.imageUrl || "")}" placeholder="https://example.com/food.jpg" /></label>
           <div class="three-column">
             <label><span>Quantity</span><input name="quantityAvailable" type="number" min="1" step="1" value="${escapeHtml(editItem?.quantityAvailable || 1)}" required /></label>
-            <label><span>Unit</span><input name="unit" value="${escapeHtml(editItem?.unit || "boxes")}" required /></label>
+            <label><span>Unit</span><select name="unit" data-unit-target>${renderUnitOptions(editItem?.category || "Prepared Food", editItem?.unit || "boxes")}</select></label>
             <label><span>Price per unit</span><input name="pricePerUnit" type="number" min="0" step="1" value="${escapeHtml(editItem?.pricePerUnit || 0)}" /></label>
           </div>
           <div class="three-column">
-            <label><span>Expiration</span><input name="expirationDate" type="datetime-local" value="${editItem?.expirationDate ? new Date(editItem.expirationDate).toISOString().slice(0, 16) : ""}" /></label>
-            <label><span>Available from</span><input name="availableFrom" type="datetime-local" value="${editItem?.availableFrom ? new Date(editItem.availableFrom).toISOString().slice(0, 16) : ""}" /></label>
-            <label><span>Available until</span><input name="availableUntil" type="datetime-local" value="${editItem?.availableUntil ? new Date(editItem.availableUntil).toISOString().slice(0, 16) : ""}" /></label>
+            <label><span>Expiration</span><div class="date-input"><input name="expirationDate" type="datetime-local" value="${editItem?.expirationDate ? new Date(editItem.expirationDate).toISOString().slice(0, 16) : ""}" /><button type="button" class="calendar-trigger" data-action="open-picker" aria-label="Open calendar"></button></div></label>
+            <label><span>Available from</span><div class="date-input"><input name="availableFrom" type="datetime-local" value="${editItem?.availableFrom ? new Date(editItem.availableFrom).toISOString().slice(0, 16) : ""}" /><button type="button" class="calendar-trigger" data-action="open-picker" aria-label="Open calendar"></button></div></label>
+            <label><span>Available until</span><div class="date-input"><input name="availableUntil" type="datetime-local" value="${editItem?.availableUntil ? new Date(editItem.availableUntil).toISOString().slice(0, 16) : ""}" /><button type="button" class="calendar-trigger" data-action="open-picker" aria-label="Open calendar"></button></div></label>
           </div>
           <div class="three-column">
             <label><span>Listing type</span><select name="listingType"><option value="donation" ${editItem?.listingType === "donation" ? "selected" : ""}>Donation</option><option value="sale" ${editItem?.listingType === "sale" ? "selected" : ""}>Paid item</option><option value="free_public" ${editItem?.listingType === "free_public" ? "selected" : ""}>Free public</option></select></label>
@@ -798,11 +834,7 @@ function renderProviderInventory(items, editItem, route) {
             <label><span>Status</span><select name="status"><option value="available" ${!editItem || editItem.status === "available" ? "selected" : ""}>Available</option><option value="draft" ${editItem?.status === "draft" ? "selected" : ""}>Draft</option><option value="archived" ${editItem?.status === "archived" ? "selected" : ""}>Archived</option></select></label>
           </div>
           <label><span>Location</span><input name="locationText" value="${escapeHtml(editItem?.locationText || state.me.address || "")}" /></label>
-          <div class="three-column">
-            <label><span>Latitude</span><input name="latitude" type="number" step="0.0001" value="${escapeHtml(editItem?.latitude ?? state.me.latitude ?? "")}" /></label>
-            <label><span>Longitude</span><input name="longitude" type="number" step="0.0001" value="${escapeHtml(editItem?.longitude ?? state.me.longitude ?? "")}" /></label>
-            <label class="checkbox-label"><input name="isPacked" type="checkbox" ${(editItem?.isPacked ?? true) ? "checked" : ""} /><span>Packed item</span></label>
-          </div>
+          <label class="checkbox-label"><input name="isPacked" type="checkbox" ${(editItem?.isPacked ?? true) ? "checked" : ""} /><span>Packed item</span></label>
           <label><span>Donor notes</span><textarea name="donorNotes" rows="2">${escapeHtml(editItem?.donorNotes || "")}</textarea></label>
           <div class="card-actions">
             <button class="primary-button" type="submit">${editItem ? "Save changes" : "Add listing"}</button>
@@ -875,7 +907,8 @@ async function renderProviderPage(route) {
       "provider",
       "network",
       "Provider coordination network",
-      `<section class="panel-card"><div class="panel-head"><h2>Other providers nearby</h2><p>Useful for load balancing or cross-referrals when NGOs need more volume.</p></div><div class="stack-list">${response.providers.length ? response.providers.map((provider) => `<article class="list-card atmospheric-card"><div class="list-card-head"><div><h3>${escapeHtml(provider.display_name)}</h3><p>${escapeHtml(provider.business_type || "provider")}</p></div><strong>${escapeHtml(String(provider.active_listings))} active listings</strong></div><div class="meta-row"><span>${escapeHtml(provider.contact_name || "No contact")}</span><span>${escapeHtml(provider.phone || "Phone pending")}</span><span>${escapeHtml(provider.address || "Address pending")}</span></div></article>`).join("") : renderEmptyCard("No peers yet", "As more providers join, this directory becomes a coordination layer.")}</div></section>`
+      `<section class="panel-card"><div class="panel-head"><h2>Other providers nearby</h2><p>Useful for load balancing or cross-referrals when NGOs need more volume.</p></div><div class="stack-list">${response.providers.length ? response.providers.map((provider) => `<article class="list-card atmospheric-card">
+      ${imageMarkup}<div class="list-card-head"><div><h3>${escapeHtml(provider.display_name)}</h3><p>${escapeHtml(provider.business_type || "provider")}</p></div><strong>${escapeHtml(String(provider.active_listings))} active listings</strong></div><div class="meta-row"><span>${escapeHtml(provider.contact_name || "No contact")}</span><span>${escapeHtml(provider.phone || "Phone pending")}</span><span>${escapeHtml(provider.address || "Address pending")}</span></div></article>`).join("") : renderEmptyCard("No peers yet", "As more providers join, this directory becomes a coordination layer.")}</div></section>`
     );
   }
 
@@ -886,7 +919,8 @@ async function renderProviderPage(route) {
     "provider",
     "trash",
     "Trash and donation flow",
-    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Quick rescue listing</h2><p>${escapeHtml(note)}</p></div><form class="stack-form" data-form="provider-item"><label><span>Item name</span><input name="name" required placeholder="Event surplus or near-expiry item" /></label><div class="three-column"><label><span>Category</span><input name="category" value="Prepared Food" /></label><label><span>Quantity</span><input name="quantityAvailable" type="number" min="1" value="10" /></label><label><span>Unit</span><input name="unit" value="packs" /></label></div><div class="three-column"><label><span>Listing type</span><select name="listingType"><option value="donation">Donation</option><option value="free_public">Free public</option></select></label><label><span>Audience</span><select name="audience"><option value="ngo">NGO</option><option value="both">Both</option><option value="consumer">Consumer</option></select></label><label class="checkbox-label"><input name="isPacked" type="checkbox" checked /><span>Packed item</span></label></div><label><span>Location</span><input name="locationText" value="${escapeHtml(state.me.address || "")}" /></label><label><span>Available until</span><input name="availableUntil" type="datetime-local" /></label><label><span>Donor notes</span><textarea name="donorNotes" rows="3" placeholder="Access instructions or urgency"></textarea></label><button class="primary-button" type="submit">Publish rescue listing</button></form></article><article class="panel-card"><div class="panel-head"><h2>Donation activity</h2><p>Recent requests attached to your available rescue inventory.</p></div><div class="stack-list">${requestsResponse.requests.length ? requestsResponse.requests.map((request) => renderRequestCard(request, "provider")).join("") : renderEmptyCard("No donation requests", "Once NGOs start claiming items, threads will appear here.")}</div><div class="panel-head compact"><h3>Current donation-capable inventory</h3></div><div class="stack-list">${itemsResponse.items.filter((item) => item.listingType !== "sale" || item.audience !== "consumer").map((item) => renderItemTile(item, "provider")).join("") || renderEmptyCard("No rescue listings", "Add a donation or free-public listing to reduce waste.")}</div></article></section>`
+    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Quick rescue listing</h2><p>${escapeHtml(note)}</p></div><form class="stack-form" data-form="provider-item"><label><span>Item name</span><input name="name" required placeholder="Event surplus or near-expiry item" /></label><div class="three-column"><label><span>Category</span><select name="category" data-unit-source>${renderOptionList(CATEGORY_OPTIONS, "Prepared Food")}</select></label><label><span>Quantity</span><input name="quantityAvailable" type="number" min="1" value="10" /></label><label><span>Unit</span><select name="unit" data-unit-target>${renderUnitOptions("Prepared Food", "packs")}</select></label></div><div class="three-column"><label><span>Listing type</span><select name="listingType"><option value="donation">Donation</option><option value="free_public">Free public</option></select></label><label><span>Audience</span><select name="audience"><option value="ngo">NGO</option><option value="both">Both</option><option value="consumer">Consumer</option></select></label><label class="checkbox-label"><input name="isPacked" type="checkbox" checked /><span>Packed item</span></label></div><label><span>Location</span><input name="locationText" value="${escapeHtml(state.me.address || "")}" /></label>
+          <label><span>Image URL (optional)</span><input name="imageUrl" type="url" placeholder="https://example.com/food.jpg" /></label><label><span>Available until</span><div class="date-input"><input name="availableUntil" type="datetime-local" /><button type="button" class="calendar-trigger" data-action="open-picker" aria-label="Open calendar"></button></div></label><label><span>Donor notes</span><textarea name="donorNotes" rows="3" placeholder="Access instructions or urgency"></textarea></label><button class="primary-button" type="submit">Publish rescue listing</button></form></article><article class="panel-card"><div class="panel-head"><h2>Donation activity</h2><p>Recent requests attached to your available rescue inventory.</p></div><div class="stack-list">${requestsResponse.requests.length ? requestsResponse.requests.map((request) => renderRequestCard(request, "provider")).join("") : renderEmptyCard("No donation requests", "Once NGOs start claiming items, threads will appear here.")}</div><div class="panel-head compact"><h3>Current donation-capable inventory</h3></div><div class="stack-list">${itemsResponse.items.filter((item) => item.listingType !== "sale" || item.audience !== "consumer").map((item) => renderItemTile(item, "provider")).join("") || renderEmptyCard("No rescue listings", "Add a donation or free-public listing to reduce waste.")}</div></article></section>`
   );
 }
 
@@ -931,7 +965,7 @@ async function renderNgoPage(route) {
     "ngo",
     "discover",
     "Discover provider inventory",
-    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Search and filter</h2><p>Filter by category, expiry urgency, and distance if your profile has coordinates.</p></div><form class="stack-form" data-form="route-filter" data-role="ngo" data-page="discover"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><input name="category" value="${escapeHtml(category)}" placeholder="Prepared Food" /></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${selected ? `<div class="detail-panel"><h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description || "No description yet.")}</p><div class="meta-row"><span>${escapeHtml(selected.providerName)}</span><span>${escapeHtml(selected.providerPhone || "Phone pending")}</span><span>${escapeHtml(selected.locationText || selected.providerAddress || "Location pending")}</span></div><div class="meta-row"><span>${selected.isPacked ? "Packed" : "Unpacked"}</span><span>${formatDate(selected.expirationDate)}</span><span>${formatQty(selected.quantityAvailable, selected.unit)}</span></div><p class="muted">Notes: ${escapeHtml(selected.donorNotes || "No donor note")}</p><form class="stack-form" data-form="ngo-request"><input type="hidden" name="itemId" value="${selected.id}" /><div class="two-column"><label><span>Quantity</span><input name="quantity" type="number" min="1" max="${escapeHtml(selected.quantityAvailable)}" required /></label><label><span>Pickup start</span><input name="pickupWindowStart" type="datetime-local" /></label></div><label><span>Pickup end</span><input name="pickupWindowEnd" type="datetime-local" /></label><label><span>Message to provider</span><textarea name="note" rows="3" placeholder="Share vehicle type or timing"></textarea></label><button class="primary-button" type="submit">Request this item</button></form></div>` : renderEmptyCard("Select a listing", "Choose any result to view provider contact details and request a pickup.")}</article><article class="panel-card"><div class="panel-head"><h2>Available listings</h2><p>Results update from live provider inventory.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "ngo")).join("") : renderEmptyCard("No matches", "Try a wider expiry window or remove filters.")}</div></article></section>`
+    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Search and filter</h2><p>Filter by category, expiry urgency, and distance if your profile has coordinates.</p></div><form class="stack-form" data-form="route-filter" data-role="ngo" data-page="discover"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><input name="category" value="${escapeHtml(category)}" placeholder="Prepared Food" /></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${selected ? `<div class="detail-panel">${selected.imageUrl ? `<div class="detail-media"><img src="${escapeHtml(selected.imageUrl)}" alt="${escapeHtml(selected.name)} photo" loading="lazy" /></div>` : ""}<h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description || "No description yet.")}</p><div class="meta-row"><span>${escapeHtml(selected.providerName)}</span><span>${escapeHtml(selected.providerPhone || "Phone pending")}</span><span>${escapeHtml(selected.locationText || selected.providerAddress || "Location pending")}</span></div><div class="meta-row"><span>${selected.isPacked ? "Packed" : "Unpacked"}</span><span>${formatDate(selected.expirationDate)}</span><span>${formatQty(selected.quantityAvailable, selected.unit)}</span></div><p class="muted">Notes: ${escapeHtml(selected.donorNotes || "No donor note")}</p><form class="stack-form" data-form="ngo-request"><input type="hidden" name="itemId" value="${selected.id}" /><div class="two-column"><label><span>Quantity</span><input name="quantity" type="number" min="1" max="${escapeHtml(selected.quantityAvailable)}" required /></label><label><span>Pickup start</span><input name="pickupWindowStart" type="datetime-local" /></label></div><label><span>Pickup end</span><input name="pickupWindowEnd" type="datetime-local" /></label><label><span>Message to provider</span><textarea name="note" rows="3" placeholder="Share vehicle type or timing"></textarea></label><button class="primary-button" type="submit">Request this item</button></form></div>` : renderEmptyCard("Select a listing", "Choose any result to view provider contact details and request a pickup.")}</article><article class="panel-card"><div class="panel-head"><h2>Available listings</h2><p>Results update from live provider inventory.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "ngo")).join("") : renderEmptyCard("No matches", "Try a wider expiry window or remove filters.")}</div></article></section>`
   );
 }
 
@@ -958,7 +992,8 @@ async function renderConsumerPage(route) {
       "consumer",
       "cart",
       "Your cart",
-      `<section class="panel-card"><div class="panel-head"><h2>Persistent cart</h2><p>Quantities stay saved to your account until you reserve or remove them.</p></div><div class="stack-list">${response.cart.items.length ? response.cart.items.map((item) => `<article class="list-card atmospheric-card"><div class="list-card-head"><div><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.providerName)} | ${formatMoney(item.pricePerUnit)}</p></div><strong>${formatMoney(item.lineTotal)}</strong></div><div class="meta-row"><span>Available: ${formatQty(item.availableQuantity, item.unit)}</span><span>${formatDate(item.expirationDate)}</span><span>${escapeHtml(item.locationText || "Location pending")}</span></div><form class="inline-form compact-grid" data-form="cart-update"><input type="hidden" name="itemId" value="${item.itemId}" /><label><span>Quantity</span><input name="quantity" type="number" min="0" max="${escapeHtml(item.availableQuantity)}" value="${escapeHtml(item.quantity)}" /></label><button class="ghost-button" type="submit">Update</button><button class="ghost-button" type="button" data-action="remove-cart-item" data-item-id="${item.itemId}">Remove</button></form></article>`).join("") : renderEmptyCard("Cart is empty", "Add items from Browse to reserve them later.")}</div><div class="summary-strip"><strong>Total items: ${escapeHtml(String(response.cart.totalItems))}</strong><strong>Total: ${formatMoney(response.cart.totalAmount)}</strong><a class="primary-button" href="${buildHash("consumer", "checkout")}">Go to checkout</a></div></section>`
+      `<section class="panel-card"><div class="panel-head"><h2>Persistent cart</h2><p>Quantities stay saved to your account until you reserve or remove them.</p></div><div class="stack-list">${response.cart.items.length ? response.cart.items.map((item) => `<article class="list-card atmospheric-card">
+      ${imageMarkup}<div class="list-card-head"><div><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.providerName)} | ${formatMoney(item.pricePerUnit)}</p></div><strong>${formatMoney(item.lineTotal)}</strong></div><div class="meta-row"><span>Available: ${formatQty(item.availableQuantity, item.unit)}</span><span>${formatDate(item.expirationDate)}</span><span>${escapeHtml(item.locationText || "Location pending")}</span></div><form class="inline-form compact-grid" data-form="cart-update"><input type="hidden" name="itemId" value="${item.itemId}" /><label><span>Quantity</span><input name="quantity" type="number" min="0" max="${escapeHtml(item.availableQuantity)}" value="${escapeHtml(item.quantity)}" /></label><button class="ghost-button" type="submit">Update</button><button class="ghost-button" type="button" data-action="remove-cart-item" data-item-id="${item.itemId}">Remove</button></form></article>`).join("") : renderEmptyCard("Cart is empty", "Add items from Browse to reserve them later.")}</div><div class="summary-strip"><strong>Total items: ${escapeHtml(String(response.cart.totalItems))}</strong><strong>Total: ${formatMoney(response.cart.totalAmount)}</strong><a class="primary-button" href="${buildHash("consumer", "checkout")}">Go to checkout</a></div></section>`
     );
   }
 
@@ -968,7 +1003,8 @@ async function renderConsumerPage(route) {
       "consumer",
       "checkout",
       "Reserve items",
-      `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Order summary</h2><p>No payment is taken in MVP mode. Reservation simply holds stock for collection.</p></div><div class="stack-list">${response.cart.items.length ? response.cart.items.map((item) => `<article class="list-card atmospheric-card"><div class="list-card-head"><div><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.providerName)}</p></div><strong>${formatMoney(item.lineTotal)}</strong></div><div class="meta-row"><span>${formatQty(item.quantity, item.unit)}</span><span>${formatDate(item.expirationDate)}</span></div></article>`).join("") : renderEmptyCard("Nothing to checkout", "Add some items to your cart first.")}</div></article><article class="panel-card"><div class="panel-head"><h2>Reserve for pickup</h2><p>Providers will see your reservation and you can mark it collected later.</p></div><form class="stack-form" data-form="checkout"><label><span>Pickup note</span><textarea name="note" rows="4" placeholder="Share preferred pickup time or a contact note"></textarea></label><div class="summary-strip"><strong>Total: ${formatMoney(response.cart.totalAmount)}</strong><button class="primary-button" type="submit" ${response.cart.items.length ? "" : "disabled"}>Reserve items</button></div></form></article></section>`
+      `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Order summary</h2><p>No payment is taken in MVP mode. Reservation simply holds stock for collection.</p></div><div class="stack-list">${response.cart.items.length ? response.cart.items.map((item) => `<article class="list-card atmospheric-card">
+      ${imageMarkup}<div class="list-card-head"><div><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.providerName)}</p></div><strong>${formatMoney(item.lineTotal)}</strong></div><div class="meta-row"><span>${formatQty(item.quantity, item.unit)}</span><span>${formatDate(item.expirationDate)}</span></div></article>`).join("") : renderEmptyCard("Nothing to checkout", "Add some items to your cart first.")}</div></article><article class="panel-card"><div class="panel-head"><h2>Reserve for pickup</h2><p>Providers will see your reservation and you can mark it collected later.</p></div><form class="stack-form" data-form="checkout"><label><span>Pickup note</span><textarea name="note" rows="4" placeholder="Share preferred pickup time or a contact note"></textarea></label><div class="summary-strip"><strong>Total: ${formatMoney(response.cart.totalAmount)}</strong><button class="primary-button" type="submit" ${response.cart.items.length ? "" : "disabled"}>Reserve items</button></div></form></article></section>`
     );
   }
 
@@ -994,7 +1030,7 @@ async function renderConsumerPage(route) {
     "consumer",
     "browse",
     "Browse surplus food",
-    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Filters and item detail</h2><p>Browse free or priced items, then add quantities to your persistent cart.</p></div><form class="stack-form" data-form="route-filter" data-role="consumer" data-page="browse"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><input name="category" value="${escapeHtml(category)}" /></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${selected ? `<div class="detail-panel"><h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description || "No description yet.")}</p><div class="meta-row"><span>${formatMoney(selected.pricePerUnit)}</span><span>${escapeHtml(selected.providerName)}</span><span>${escapeHtml(selected.providerPhone || "Phone pending")}</span></div><div class="meta-row"><span>${formatQty(selected.quantityAvailable, selected.unit)}</span><span>${formatDate(selected.expirationDate)}</span><span>${selected.isPacked ? "Packed" : "Unpacked"}</span></div><p class="muted">${escapeHtml(selected.locationText || selected.providerAddress || "Pickup location pending")}</p><form class="stack-form" data-form="cart-add"><input type="hidden" name="itemId" value="${selected.id}" /><label><span>Quantity</span><input name="quantity" type="number" min="1" max="${escapeHtml(selected.quantityAvailable)}" required /></label><button class="primary-button" type="submit">Add to cart</button></form></div>` : renderEmptyCard("Select a listing", "Choose any card to view pickup details and add it to your cart.")}</article><article class="panel-card"><div class="panel-head"><h2>Available food</h2><p>Free items are marked accordingly. Paid items stay in a reserve-only checkout flow.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "consumer")).join("") : renderEmptyCard("No items found", "Try loosening your search or distance filters.")}</div></article></section>`
+    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Filters and item detail</h2><p>Browse free or priced items, then add quantities to your persistent cart.</p></div><form class="stack-form" data-form="route-filter" data-role="consumer" data-page="browse"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><input name="category" value="${escapeHtml(category)}" /></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${selected ? `<div class="detail-panel">${selected.imageUrl ? `<div class="detail-media"><img src="${escapeHtml(selected.imageUrl)}" alt="${escapeHtml(selected.name)} photo" loading="lazy" /></div>` : ""}<h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description || "No description yet.")}</p><div class="meta-row"><span>${formatMoney(selected.pricePerUnit)}</span><span>${escapeHtml(selected.providerName)}</span><span>${escapeHtml(selected.providerPhone || "Phone pending")}</span></div><div class="meta-row"><span>${formatQty(selected.quantityAvailable, selected.unit)}</span><span>${formatDate(selected.expirationDate)}</span><span>${selected.isPacked ? "Packed" : "Unpacked"}</span></div><p class="muted">${escapeHtml(selected.locationText || selected.providerAddress || "Pickup location pending")}</p><form class="stack-form" data-form="cart-add"><input type="hidden" name="itemId" value="${selected.id}" /><label><span>Quantity</span><input name="quantity" type="number" min="1" max="${escapeHtml(selected.quantityAvailable)}" required /></label><button class="primary-button" type="submit">Add to cart</button></form></div>` : renderEmptyCard("Select a listing", "Choose any card to view pickup details and add it to your cart.")}</article><article class="panel-card"><div class="panel-head"><h2>Available food</h2><p>Free items are marked accordingly. Paid items stay in a reserve-only checkout flow.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "consumer")).join("") : renderEmptyCard("No items found", "Try loosening your search or distance filters.")}</div></article></section>`
   );
 }
 
@@ -1008,6 +1044,7 @@ async function renderRoute() {
       const data = await api("/api/leaderboards");
       ROOT.innerHTML = renderHomePage(data);
       syncRoleFieldVisibility();
+      syncUnitOptionsForCategory();
       hydrateVisualEnhancements();
       focusShortcutDialogIfNeeded();
       return;
@@ -1030,6 +1067,7 @@ async function renderRoute() {
   }
 
   syncRoleFieldVisibility();
+      syncUnitOptionsForCategory();
   hydrateVisualEnhancements();
   focusShortcutDialogIfNeeded();
 }
@@ -1067,19 +1105,7 @@ function hydrateVisualEnhancements() {
     );
 
     motionTargets.forEach((element) => motion.observer.observe(element));
-  }
-
-  document.querySelectorAll(".hero-card, .panel-card, .metric-card, .sidebar, .list-card, .request-card").forEach((element) => {
-    element.classList.add("tilt-surface");
-
-    if (motion.reduced || element.dataset.tiltBound === "true") {
-      return;
-    }
-
-    element.dataset.tiltBound = "true";
-    element.addEventListener("pointermove", handleTiltMove);
-    element.addEventListener("pointerleave", resetTiltMove);
-  });
+  }
 }
 
 function handleTiltMove(event) {
@@ -1104,6 +1130,22 @@ function resetTiltMove(event) {
   element.style.setProperty("--glow-y", "50%");
 }
 
+function syncUnitOptionsForCategory(selectEl = null) {
+  const selects = selectEl
+    ? [selectEl]
+    : Array.from(document.querySelectorAll("select[name=\"category\"][data-unit-source]"));
+
+  selects.forEach((select) => {
+    const form = select.closest("form");
+    const unitSelect = form ? form.querySelector("select[name=\"unit\"][data-unit-target]") : null;
+    if (!unitSelect) {
+      return;
+    }
+    const current = unitSelect.value;
+    const units = getUnitsForCategory(select.value);
+    unitSelect.innerHTML = renderOptionList(units, units.includes(current) ? current : units[0] || "units");
+  });
+}
 function syncRoleFieldVisibility() {
   const roleField = document.getElementById("register-role");
   const providerOnlyFields = document.querySelectorAll(".provider-only");
@@ -1261,6 +1303,19 @@ async function handleClick(event) {
       return;
     }
 
+        if (action === "open-picker") {
+      const wrapper = target.closest(".date-input");
+      const input = wrapper ? wrapper.querySelector("input") : null;
+      if (input) {
+        if (typeof input.showPicker === "function") {
+          input.showPicker();
+        } else {
+          input.focus();
+        }
+      }
+      return;
+    }
+
     if (action === "demo-login") {
       await signInDemoRole(target.dataset.role);
       return;
@@ -1317,10 +1372,13 @@ async function bootstrap() {
     await renderRoute();
   });
   document.addEventListener("change", (event) => {
-    if (event.target && event.target.id === "register-role") {
-      syncRoleFieldVisibility();
-    }
-  });
+  if (event.target && event.target.id === "register-role") {
+    syncRoleFieldVisibility();
+  }
+  if (event.target && event.target.matches('select[name="category"][data-unit-source]')) {
+    syncUnitOptionsForCategory(event.target);
+  }
+});
 
   try {
     await refreshSession();
@@ -1337,6 +1395,24 @@ async function bootstrap() {
 }
 
 bootstrap();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

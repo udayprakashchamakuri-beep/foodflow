@@ -460,6 +460,7 @@ function buildDemoItemView(store, item, viewer = null) {
     pricePerUnit: item.pricePerUnit,
     status: item.status,
     donorNotes: item.donorNotes,
+    imageUrl: item.imageUrl,
     distanceKm
   };
 }
@@ -919,7 +920,8 @@ async function api(path, options = {}) {
       audience: demoNormalizeAudience(body.audience),
       pricePerUnit: demoToNumber(body.pricePerUnit, 0),
       status: demoNormalizeStatus(body.status),
-      donorNotes: String(body.donorNotes || "").trim()
+      donorNotes: String(body.donorNotes || "").trim(),
+      imageUrl: String(body.imageUrl || "").trim()
     };
     store.items.push(item);
     saveDemoStore(store);
@@ -949,6 +951,7 @@ async function api(path, options = {}) {
     item.pricePerUnit = demoToNumber(body.pricePerUnit, item.pricePerUnit);
     item.status = demoNormalizeStatus(body.status || item.status);
     item.donorNotes = String(body.donorNotes ?? item.donorNotes ?? "").trim();
+    item.imageUrl = String(body.imageUrl ?? item.imageUrl ?? "").trim();
     saveDemoStore(store);
     return demoClone({ item: buildDemoItemView(store, item, user) });
   }
@@ -1375,6 +1378,10 @@ function main() {
 }
 
 main();
+
+
+
+
 
 
 

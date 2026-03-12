@@ -232,6 +232,7 @@ function openDatabase() {
       price_per_unit REAL NOT NULL DEFAULT 0,
       status TEXT NOT NULL DEFAULT 'available',
       donor_notes TEXT,
+      image_url TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (provider_id) REFERENCES users (id) ON DELETE CASCADE
@@ -321,6 +322,12 @@ function openDatabase() {
     CREATE INDEX IF NOT EXISTS idx_transactions_provider ON transactions (provider_id);
   `);
 
+  try {
+    db.exec("ALTER TABLE items ADD COLUMN image_url TEXT");
+  } catch (_error) {
+    // Column already exists.
+  }
+
   const countRow = db.prepare("SELECT COUNT(*) AS total FROM users").get();
   if (!countRow.total) {
     seedDatabase(db);
@@ -369,8 +376,9 @@ function insertItem(db, item) {
       audience,
       price_per_unit,
       status,
-      donor_notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      donor_notes,
+      image_url
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const result = statement.run(
@@ -391,7 +399,8 @@ function insertItem(db, item) {
     item.audience,
     item.pricePerUnit,
     item.status || "available",
-    item.donorNotes || null
+    item.donorNotes || null,
+    item.imageUrl || null
   );
   return Number(result.lastInsertRowid);
 }
@@ -698,6 +707,7 @@ function mapItemRow(row, viewer = null) {
     pricePerUnit: row.price_per_unit,
     status: row.status,
     donorNotes: row.donor_notes,
+    imageUrl: row.image_url,
     distanceKm
   };
 }
@@ -1367,7 +1377,8 @@ addRoute("POST", /^\/api\/items$/, async (req, res, db) => {
     audience: normalizeAudience(body.audience),
     pricePerUnit: toNumber(body.pricePerUnit, 0),
     status: normalizeItemStatus(body.status),
-    donorNotes: String(body.donorNotes || "").trim()
+    donorNotes: String(body.donorNotes || "").trim(),
+    imageUrl: String(body.imageUrl || "").trim()
   });
 
   sendJson(res, 201, { item: getItemById(db, itemId, user) });
@@ -1406,6 +1417,7 @@ addRoute("PUT", /^\/api\/items\/(\d+)$/, async (req, res, db, match) => {
       price_per_unit = ?,
       status = ?,
       donor_notes = ?,
+      image_url = ?,
       updated_at = ?
     WHERE id = ? AND provider_id = ?
   `).run(
@@ -1426,6 +1438,7 @@ addRoute("PUT", /^\/api\/items\/(\d+)$/, async (req, res, db, match) => {
     toNumber(body.pricePerUnit, existing.price_per_unit),
     normalizeItemStatus(body.status || existing.status),
     String(body.donorNotes ?? existing.donor_notes ?? "").trim(),
+    String(body.imageUrl ?? existing.image_url ?? "").trim(),
     nowIso(),
     itemId,
     user.id
@@ -1911,4 +1924,5 @@ module.exports = {
   createAppServer,
   openDatabase
 };
+
 
