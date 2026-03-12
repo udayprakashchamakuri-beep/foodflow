@@ -6,13 +6,9 @@ const state = {
   shortcutsOpen: false
 };
 
-
-
-const cursorHalo = {
-  raf: null,
-  x: -999,
-  y: -999,
-  enabled: window.matchMedia('(pointer: fine)').matches
+const motion = {
+  observer: null,
+  reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches
 };
 
 const NAV_ITEMS = {
@@ -1058,49 +1054,40 @@ function hydrateVisualEnhancements() {
 
     motionTargets.forEach((element) => motion.observer.observe(element));
   }
+
+  document.querySelectorAll(".hero-card, .panel-card, .metric-card, .sidebar, .list-card, .request-card").forEach((element) => {
+    element.classList.add("tilt-surface");
+
+    if (motion.reduced || element.dataset.tiltBound === "true") {
+      return;
+    }
+
+    element.dataset.tiltBound = "true";
+    element.addEventListener("pointermove", handleTiltMove);
+    element.addEventListener("pointerleave", resetTiltMove);
+  });
 }
 
-function initCursorHalo() {
-  if (motion.reduced || !cursorHalo.enabled) {
-    return;
-  }
+function handleTiltMove(event) {
+  const element = event.currentTarget;
+  const rect = element.getBoundingClientRect();
+  const px = (event.clientX - rect.left) / rect.width;
+  const py = (event.clientY - rect.top) / rect.height;
+  const rotateY = (px - 0.5) * 10;
+  const rotateX = (0.5 - py) * 8;
 
-  if (document.querySelector(".cursor-halo")) {
-    return;
-  }
+  element.style.setProperty("--tilt-y", rotateY.toFixed(2) + "deg");
+  element.style.setProperty("--tilt-x", rotateX.toFixed(2) + "deg");
+  element.style.setProperty("--glow-x", (px * 100).toFixed(2) + "%");
+  element.style.setProperty("--glow-y", (py * 100).toFixed(2) + "%");
+}
 
-  const halo = document.createElement("div");
-  halo.className = "cursor-halo";
-  halo.setAttribute("aria-hidden", "true");
-  document.body.appendChild(halo);
-
-  const update = () => {
-    document.documentElement.style.setProperty("--cursor-x", `${cursorHalo.x}px`);
-    document.documentElement.style.setProperty("--cursor-y", `${cursorHalo.y}px`);
-    cursorHalo.raf = null;
-  };
-
-  const schedule = () => {
-    if (!cursorHalo.raf) {
-      cursorHalo.raf = requestAnimationFrame(update);
-    }
-  };
-
-  const handleMove = (event) => {
-    cursorHalo.x = event.clientX;
-    cursorHalo.y = event.clientY;
-    schedule();
-  };
-
-  const handleLeave = () => {
-    cursorHalo.x = -999;
-    cursorHalo.y = -999;
-    schedule();
-  };
-
-  window.addEventListener("pointermove", handleMove);
-  document.addEventListener("mouseleave", handleLeave);
-  window.addEventListener("blur", handleLeave);
+function resetTiltMove(event) {
+  const element = event.currentTarget;
+  element.style.setProperty("--tilt-y", "0deg");
+  element.style.setProperty("--tilt-x", "0deg");
+  element.style.setProperty("--glow-x", "50%");
+  element.style.setProperty("--glow-y", "50%");
 }
 
 function syncRoleFieldVisibility() {
@@ -1308,7 +1295,6 @@ async function handleClick(event) {
 }
 
 async function bootstrap() {
-  initCursorHalo();
   document.addEventListener("submit", handleSubmit);
   document.addEventListener("click", handleClick);
   document.addEventListener("keydown", handleGlobalKeydown);
@@ -1337,8 +1323,6 @@ async function bootstrap() {
 }
 
 bootstrap();
-
-
 
 
 
