@@ -1943,7 +1943,9 @@ function renderItemTile(item, mode, params = null) {
       ? `href="${buildHash("provider", "inventory", { edit: item.id })}"`
       : mode === "ngo"
         ? `href="${buildHash("ngo", "detail", detailParams)}"`
-        : `href="${buildHash(mode, "browse", detailParams)}"`;
+        : mode === "consumer"
+          ? `href="${buildHash("consumer", "detail", detailParams)}"`
+          : `href="${buildHash(mode, "browse", detailParams)}"`;
 
   const imageMarkup = renderCardImage(item.imageUrl || item.barcodeImageUrl, item.name);
 
@@ -2509,22 +2511,41 @@ async function renderConsumerPage(route) {
     );
   }
 
+  if (route.page === "detail") {
+    const itemId = route.params.get("item");
+    if (!itemId) {
+      return renderShell("consumer", "browse", "Item detail", renderEmptyCard("Select a listing", "Open any item from Browse to view the full item details."));
+    }
+
+    const response = await api(`/api/items/${itemId}`);
+    const item = response.item;
+    const cartOpen = route.params.get("reserve") === "open";
+    const backParams = Object.fromEntries(route.params.entries());
+    delete backParams.item;
+    delete backParams.reserve;
+
+    return renderShell(
+      "consumer",
+      "browse",
+      "Food detail",
+      `<section class="content-grid two-pane consumer-detail-layout"><article class="panel-card detail-panel consumer-detail-panel">${renderMediaGallery(item)}<div class="panel-head"><div><p class="eyebrow">Surplus listing</p><h2>${escapeHtml(item.name)}</h2></div>${badge(item.status)}</div><p>${escapeHtml(item.description || "No description yet.")}</p><div class="meta-row"><span>${formatMoney(item.pricePerUnit)}</span><span>${formatQty(item.quantityAvailable, item.unit)}</span><span>${formatDate(item.expirationDate)}</span><span>${item.isPacked ? "Packed" : "Unpacked"}</span></div><div class="meta-row"><span>${escapeHtml(item.providerName)}</span><span>${escapeHtml(item.providerPhone || "Phone pending")}</span><span>${escapeHtml(item.locationText || item.providerAddress || "Pickup location pending")}</span></div><p class="muted">Provider notes: ${escapeHtml(item.donorNotes || "No provider note")}</p><div class="card-actions"><a class="ghost-button" href="${buildHash("consumer", "browse", backParams)}">Back to browse</a>${cartOpen ? `<a class="ghost-button" href="${buildHash("consumer", "detail", { ...backParams, item: item.id })}">Cancel</a>` : `<a class="primary-button" href="${buildHash("consumer", "detail", { ...backParams, item: item.id, reserve: "open" })}">Add to cart</a>`}</div>${cartOpen ? `<form class="stack-form consumer-request-panel" data-form="cart-add"><input type="hidden" name="itemId" value="${item.id}" /><div class="two-column"><label><span>Quantity</span><input name="quantity" type="number" min="1" max="${escapeHtml(item.quantityAvailable)}" required /></label><label><span>Preferred pickup by</span><div class="date-input"><input name="pickupPreference" type="datetime-local" /><button type="button" class="calendar-trigger" data-action="open-picker" aria-label="Open calendar"></button></div></label></div><label><span>Pickup note (optional)</span><textarea name="note" rows="3" placeholder="You can confirm final pickup timing during checkout."></textarea></label><button class="primary-button" type="submit">Add item to cart</button></form>` : ""}</article><article class="panel-card"><div class="panel-head"><h2>Collection guidance</h2><p>Check the expiry time and pickup location before reserving. Final coordination still happens during checkout and collection.</p></div><div class="stack-list"><article class="empty-card atmospheric-card"><h3>Before adding to cart</h3><p>Review expiry date, storage needs, price, provider phone number, and whether the item is packed or unpacked.</p></article><article class="empty-card atmospheric-card"><h3>Provider contact</h3><p>${escapeHtml(item.providerContact || item.providerName)}</p><p>${escapeHtml(item.providerPhone || "Phone pending")}</p><p>${escapeHtml(item.providerAddress || item.locationText || "Location pending")}</p></article></div></article></section>`
+    );
+  }
+
   const search = route.params.get("search") || "";
   const category = route.params.get("category") || "";
   const expirationDays = route.params.get("expirationDays") || "";
   const distanceKm = route.params.get("distanceKm") || "";
   const sort = route.params.get("sort") || "";
   const response = await api(`/api/items?audience=consumer&search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}&expirationDays=${encodeURIComponent(expirationDays)}&distanceKm=${encodeURIComponent(distanceKm)}&sort=${encodeURIComponent(sort)}`);
-  const selected = response.items.find((item) => String(item.id) === route.params.get("item"));
 
   return renderShell(
     "consumer",
     "browse",
     "Browse surplus food",
-    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Filters and item detail</h2><p>Browse free or priced items, then add quantities to your persistent cart.</p></div><form class="stack-form" data-form="route-filter" data-role="consumer" data-page="browse"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><input name="category" value="${escapeHtml(category)}" /></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${selected ? `<div class="detail-panel">${renderMediaGallery(selected)}<h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description || "No description yet.")}</p><div class="meta-row"><span>${formatMoney(selected.pricePerUnit)}</span><span>${escapeHtml(selected.providerName)}</span><span>${escapeHtml(selected.providerPhone || "Phone pending")}</span></div><div class="meta-row"><span>${formatQty(selected.quantityAvailable, selected.unit)}</span><span>${formatDate(selected.expirationDate)}</span><span>${selected.isPacked ? "Packed" : "Unpacked"}</span></div><p class="muted">${escapeHtml(selected.locationText || selected.providerAddress || "Pickup location pending")}</p><form class="stack-form" data-form="cart-add"><input type="hidden" name="itemId" value="${selected.id}" /><label><span>Quantity</span><input name="quantity" type="number" min="1" max="${escapeHtml(selected.quantityAvailable)}" required /></label><button class="primary-button" type="submit">Add to cart</button></form></div>` : renderEmptyCard("Select a listing", "Choose any card to view pickup details and add it to your cart.")}</article><article class="panel-card"><div class="panel-head"><h2>Available food</h2><p>Free items are marked accordingly. Paid items stay in a reserve-only checkout flow.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "consumer", Object.fromEntries(route.params.entries()))).join("") : renderEmptyCard("No items found", "Try loosening your search or distance filters.")}</div></article></section>`
+    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Filters</h2><p>Browse free or priced items and open any listing to see full pickup details before adding it to cart.</p></div><form class="stack-form" data-form="route-filter" data-role="consumer" data-page="browse"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><input name="category" value="${escapeHtml(category)}" /></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${renderEmptyCard("Open a listing", "Press View details on any result to open the full item page and add it to your cart.")}</article><article class="panel-card"><div class="panel-head"><h2>Available food</h2><p>Free items are marked accordingly. Paid items stay in a reserve-only checkout flow.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "consumer", Object.fromEntries(route.params.entries()))).join("") : renderEmptyCard("No items found", "Try loosening your search or distance filters.")}</div></article></section>`
   );
 }
-
 async function renderRoute() {
   const route = parseRoute();
   document.body.dataset.role = state.me ? state.me.role : "guest";
@@ -2562,15 +2583,7 @@ async function renderRoute() {
   hydrateVisualEnhancements();
   focusShortcutDialogIfNeeded();
 
-  if (route.role === "consumer" && route.params.get("item")) {
-    const detailPanel = document.querySelector(".detail-panel");
-    if (detailPanel instanceof HTMLElement) {
-      detailPanel.scrollIntoView({
-        behavior: motion.reduced ? "auto" : "smooth",
-        block: "start"
-      });
-    }
-  }
+
 }
 
 function hydrateVisualEnhancements() {
@@ -2913,6 +2926,7 @@ async function bootstrap() {
 }
 
 bootstrap();
+
 
 
 
