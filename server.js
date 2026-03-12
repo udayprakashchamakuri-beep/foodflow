@@ -233,6 +233,7 @@ function openDatabase() {
       status TEXT NOT NULL DEFAULT 'available',
       donor_notes TEXT,
       image_url TEXT,
+      barcode_image_url TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (provider_id) REFERENCES users (id) ON DELETE CASCADE
@@ -328,10 +329,18 @@ function openDatabase() {
     // Column already exists.
   }
 
+  try {
+    db.exec("ALTER TABLE items ADD COLUMN barcode_image_url TEXT");
+  } catch (_error) {
+    // Column already exists.
+  }
+
   const countRow = db.prepare("SELECT COUNT(*) AS total FROM users").get();
   if (!countRow.total) {
     seedDatabase(db);
   }
+
+  ensureShowcaseRequests(db);
 
   return db;
 }
@@ -377,8 +386,9 @@ function insertItem(db, item) {
       price_per_unit,
       status,
       donor_notes,
-      image_url
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      image_url,
+      barcode_image_url
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const result = statement.run(
@@ -400,9 +410,51 @@ function insertItem(db, item) {
     item.pricePerUnit,
     item.status || "available",
     item.donorNotes || null,
-    item.imageUrl || null
+    item.imageUrl || null,
+    item.barcodeImageUrl || null
   );
   return Number(result.lastInsertRowid);
+}
+
+function ensureShowcaseRequests(db) {
+  const showcase = db.prepare(`
+    SELECT items.id AS item_id, ngos.id AS ngo_id
+    FROM items
+    JOIN users AS providers ON providers.id = items.provider_id
+    JOIN users AS ngos ON ngos.email = 'ngo@hopeharvest.demo'
+    WHERE providers.email = 'provider@freshplate.demo'
+      AND items.name = 'Packed Veg Biryani'
+    LIMIT 1
+  `).get();
+
+  if (!showcase) {
+    return;
+  }
+
+  const existingPending = db.prepare(`
+    SELECT id
+    FROM ngo_requests
+    WHERE item_id = ? AND ngo_id = ? AND status = 'pending'
+    LIMIT 1
+  `).get(showcase.item_id, showcase.ngo_id);
+
+  if (existingPending) {
+    return;
+  }
+
+  db.prepare(`
+    INSERT INTO ngo_requests (item_id, ngo_id, quantity, status, note, pickup_window_start, pickup_window_end, created_at, updated_at)
+    VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?)
+  `).run(
+    showcase.item_id,
+    showcase.ngo_id,
+    6,
+    'Can pick up before noon.',
+    startOfFuture(2),
+    startOfFuture(5),
+    nowIso(),
+    nowIso()
+  );
 }
 function seedDatabase(db) {
   const providerA = insertUser(db, {
@@ -708,6 +760,7 @@ function mapItemRow(row, viewer = null) {
     status: row.status,
     donorNotes: row.donor_notes,
     imageUrl: row.image_url,
+    barcodeImageUrl: row.barcode_image_url,
     distanceKm
   };
 }
@@ -1383,7 +1436,8 @@ addRoute("POST", /^\/api\/items$/, async (req, res, db) => {
     pricePerUnit: toNumber(body.pricePerUnit, 0),
     status: normalizeItemStatus(body.status),
     donorNotes: String(body.donorNotes || "").trim(),
-    imageUrl: String(body.imageUrl || "").trim()
+    imageUrl: String(body.imageUrl || "").trim(),
+    barcodeImageUrl: String(body.barcodeImageUrl || "").trim()
   });
 
   sendJson(res, 201, { item: getItemById(db, itemId, user) });
@@ -1423,6 +1477,7 @@ addRoute("PUT", /^\/api\/items\/(\d+)$/, async (req, res, db, match) => {
       status = ?,
       donor_notes = ?,
       image_url = ?,
+      barcode_image_url = ?,
       updated_at = ?
     WHERE id = ? AND provider_id = ?
   `).run(
@@ -1444,6 +1499,7 @@ addRoute("PUT", /^\/api\/items\/(\d+)$/, async (req, res, db, match) => {
     normalizeItemStatus(body.status || existing.status),
     String(body.donorNotes ?? existing.donor_notes ?? "").trim(),
     String(body.imageUrl ?? existing.image_url ?? "").trim(),
+    String(body.barcodeImageUrl ?? existing.barcode_image_url ?? "").trim(),
     nowIso(),
     itemId,
     user.id

@@ -5,13 +5,13 @@ const ROOT = process.cwd();
 const PUBLIC_DIR = path.join(ROOT, "public");
 const DOCS_DIR = path.join(ROOT, "docs");
 
-const DEMO_STORAGE_KEY = "foodflow-demo-db-v1";
-const DEMO_SESSION_KEY = "foodflow-demo-session-v1";
+const DEMO_STORAGE_KEY = "foodflow-demo-db-v2";
+const DEMO_SESSION_KEY = "foodflow-demo-session-v2";
 
 function buildDemoApiSource() {
   return String.raw`const DEMO_STORAGE_KEY = "${DEMO_STORAGE_KEY}";
 const DEMO_SESSION_KEY = "${DEMO_SESSION_KEY}";
-const DEMO_VERSION = 1;
+const DEMO_VERSION = 2;
 
 function demoNowIso() {
   return new Date().toISOString();
@@ -282,6 +282,19 @@ function createDemoSeed() {
           createdAt: demoNowIso()
         }
       ]
+    },
+    {
+      id: 2,
+      itemId: 1,
+      ngoId: 5,
+      quantity: 6,
+      status: "pending",
+      note: "Can pick up before noon.",
+      pickupWindowStart: demoFutureHours(2),
+      pickupWindowEnd: demoFutureHours(5),
+      createdAt: demoNowIso(),
+      updatedAt: demoNowIso(),
+      messages: []
     }
   ];
 
@@ -347,7 +360,7 @@ function createDemoSeed() {
     counters: {
       users: 7,
       items: 5,
-      requests: 2,
+      requests: 3,
       messages: 3,
       reservations: 2,
       transactions: 4
@@ -461,6 +474,7 @@ function buildDemoItemView(store, item, viewer = null) {
     status: item.status,
     donorNotes: item.donorNotes,
     imageUrl: item.imageUrl,
+    barcodeImageUrl: item.barcodeImageUrl,
     distanceKm
   };
 }
@@ -923,7 +937,8 @@ async function api(path, options = {}) {
       pricePerUnit: demoToNumber(body.pricePerUnit, 0),
       status: demoNormalizeStatus(body.status),
       donorNotes: String(body.donorNotes || "").trim(),
-      imageUrl: String(body.imageUrl || "").trim()
+      imageUrl: String(body.imageUrl || "").trim(),
+      barcodeImageUrl: String(body.barcodeImageUrl || "").trim()
     };
     store.items.push(item);
     saveDemoStore(store);
@@ -954,6 +969,7 @@ async function api(path, options = {}) {
     item.status = demoNormalizeStatus(body.status || item.status);
     item.donorNotes = String(body.donorNotes ?? item.donorNotes ?? "").trim();
     item.imageUrl = String(body.imageUrl ?? item.imageUrl ?? "").trim();
+    item.barcodeImageUrl = String(body.barcodeImageUrl ?? item.barcodeImageUrl ?? "").trim();
     saveDemoStore(store);
     return demoClone({ item: buildDemoItemView(store, item, user) });
   }

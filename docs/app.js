@@ -118,6 +118,35 @@ function formatQty(value, unit = "units") {
   return `${Number(value || 0)} ${unit}`;
 }
 
+function readLocalFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve("");
+      return;
+    }
+
+    if (!file.type || !file.type.startsWith("image/")) {
+      reject(new Error("Upload a valid image file."));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function resolveProviderImagePayload(form, formData) {
+  const imageFile = form.querySelector('input[name="imageFile"]')?.files?.[0];
+  const barcodeImageFile = form.querySelector('input[name="barcodeImageFile"]')?.files?.[0];
+
+  return {
+    imageUrl: imageFile ? await readLocalFileAsDataUrl(imageFile) : String(formData.get("imageUrl") || "").trim(),
+    barcodeImageUrl: barcodeImageFile ? await readLocalFileAsDataUrl(barcodeImageFile) : String(formData.get("barcodeImageUrl") || "").trim()
+  };
+}
+
 function setFlash(message, tone = "success") {
   state.flash = { message, tone };
 }
@@ -131,9 +160,9 @@ function consumeFlash() {
   return flash;
 }
 
-const DEMO_STORAGE_KEY = "foodflow-demo-db-v1";
-const DEMO_SESSION_KEY = "foodflow-demo-session-v1";
-const DEMO_VERSION = 1;
+const DEMO_STORAGE_KEY = "foodflow-demo-db-v2";
+const DEMO_SESSION_KEY = "foodflow-demo-session-v2";
+const DEMO_VERSION = 2;
 
 function demoNowIso() {
   return new Date().toISOString();
@@ -404,6 +433,19 @@ function createDemoSeed() {
           createdAt: demoNowIso()
         }
       ]
+    },
+    {
+      id: 2,
+      itemId: 1,
+      ngoId: 5,
+      quantity: 6,
+      status: "pending",
+      note: "Can pick up before noon.",
+      pickupWindowStart: demoFutureHours(2),
+      pickupWindowEnd: demoFutureHours(5),
+      createdAt: demoNowIso(),
+      updatedAt: demoNowIso(),
+      messages: []
     }
   ];
 
@@ -469,7 +511,7 @@ function createDemoSeed() {
     counters: {
       users: 7,
       items: 5,
-      requests: 2,
+      requests: 3,
       messages: 3,
       reservations: 2,
       transactions: 4
@@ -583,6 +625,7 @@ function buildDemoItemView(store, item, viewer = null) {
     status: item.status,
     donorNotes: item.donorNotes,
     imageUrl: item.imageUrl,
+    barcodeImageUrl: item.barcodeImageUrl,
     distanceKm
   };
 }
@@ -1045,7 +1088,8 @@ async function api(path, options = {}) {
       pricePerUnit: demoToNumber(body.pricePerUnit, 0),
       status: demoNormalizeStatus(body.status),
       donorNotes: String(body.donorNotes || "").trim(),
-      imageUrl: String(body.imageUrl || "").trim()
+      imageUrl: String(body.imageUrl || "").trim(),
+      barcodeImageUrl: String(body.barcodeImageUrl || "").trim()
     };
     store.items.push(item);
     saveDemoStore(store);
@@ -1076,6 +1120,7 @@ async function api(path, options = {}) {
     item.status = demoNormalizeStatus(body.status || item.status);
     item.donorNotes = String(body.donorNotes ?? item.donorNotes ?? "").trim();
     item.imageUrl = String(body.imageUrl ?? item.imageUrl ?? "").trim();
+    item.barcodeImageUrl = String(body.barcodeImageUrl ?? item.barcodeImageUrl ?? "").trim();
     saveDemoStore(store);
     return demoClone({ item: buildDemoItemView(store, item, user) });
   }
@@ -1763,13 +1808,86 @@ function renderCardImage(imageUrl, name) {
     : "";
 }
 
+function renderMediaGallery(item, variant = "detail") {
+  const media = [
+    item.imageUrl ? { label: "Food photo", url: item.imageUrl, alt: `${item.name} photo` } : null,
+    item.barcodeImageUrl ? { label: "Barcode", url: item.barcodeImageUrl, alt: `${item.name} barcode` } : null
+  ].filter(Boolean);
+
+  if (!media.length) {
+    return "";
+  }
+
+  const wrapperClass = variant === "preview" ? "upload-preview-grid" : "detail-media-grid";
+  const cardClass = variant === "preview" ? "upload-preview" : "detail-media";
+
+  return `
+    <div class="${wrapperClass}">
+      ${media
+        .map(
+          (entry) => `
+            <figure class="${cardClass}">
+              <img src="${escapeHtml(entry.url)}" alt="${escapeHtml(entry.alt)}" loading="lazy" />
+              <figcaption>${escapeHtml(entry.label)}</figcaption>
+            </figure>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderProviderImageFields(item = null) {
+  return `
+    <section class="upload-fields">
+      <div class="panel-head compact">
+        <h3>Images</h3>
+        <p>Add a food photo and barcode photo using a URL or a file from your device.</p>
+      </div>
+      ${item ? renderMediaGallery(item, "preview") : ""}
+      <div class="two-column">
+        <label><span>Food image URL (optional)</span><input name="imageUrl" type="url" value="${escapeHtml(item?.imageUrl || "")}" placeholder="https://example.com/food.jpg" /></label>
+        <label><span>Food image from device</span><input name="imageFile" type="file" accept="image/*" /></label>
+      </div>
+      <div class="two-column">
+        <label><span>Barcode image URL (optional)</span><input name="barcodeImageUrl" type="url" value="${escapeHtml(item?.barcodeImageUrl || "")}" placeholder="https://example.com/barcode.jpg" /></label>
+        <label><span>Barcode from device</span><input name="barcodeImageFile" type="file" accept="image/*" /></label>
+      </div>
+    </section>
+  `;
+}
+
+function renderRequestActions(request, role) {
+  if (role === "provider") {
+    const actions = [];
+    if (request.status === "pending") {
+      actions.push('<button class="ghost-button" data-action="request-status" data-request-id="' + request.id + '" data-status="approved">Approve</button>');
+      actions.push('<button class="ghost-button" data-action="request-status" data-request-id="' + request.id + '" data-status="rejected">Reject</button>');
+    }
+    if (request.status === "approved") {
+      actions.push('<button class="ghost-button" data-action="request-status" data-request-id="' + request.id + '" data-status="fulfilled">Fulfill</button>');
+      actions.push('<button class="ghost-button" data-action="request-status" data-request-id="' + request.id + '" data-status="delivered">Delivered</button>');
+    }
+    if (request.status === "fulfilled") {
+      actions.push('<button class="ghost-button" data-action="request-status" data-request-id="' + request.id + '" data-status="delivered">Delivered</button>');
+    }
+    return actions.length ? `<div class="card-actions">${actions.join("")}</div>` : "";
+  }
+
+  if (role === "ngo" && request.status === "pending") {
+    return `<div class="card-actions"><button class="ghost-button" data-action="request-status" data-request-id="${request.id}" data-status="cancelled">Cancel request</button></div>`;
+  }
+
+  return "";
+}
+
 function renderItemTile(item, mode) {
   const detailAction =
     mode === "provider"
       ? `href="${buildHash("provider", "inventory", { edit: item.id })}"`
       : `href="${buildHash(mode, mode === "consumer" ? "browse" : "discover", { item: item.id })}"`;
 
-  const imageMarkup = renderCardImage(item.imageUrl, item.name);
+  const imageMarkup = renderCardImage(item.imageUrl || item.barcodeImageUrl, item.name);
 
   return `
     <article class="list-card atmospheric-card">
@@ -1844,20 +1962,7 @@ function renderRequestCard(request, role) {
         </label>
         <button class="ghost-button" type="submit">Send</button>
       </form>
-      ${
-        role === "provider"
-          ? `
-            <div class="card-actions">
-              <button class="ghost-button" data-action="request-status" data-request-id="${request.id}" data-status="approved">Approve</button>
-              <button class="ghost-button" data-action="request-status" data-request-id="${request.id}" data-status="fulfilled">Fulfill</button>
-              <button class="ghost-button" data-action="request-status" data-request-id="${request.id}" data-status="delivered">Delivered</button>
-              <button class="ghost-button" data-action="request-status" data-request-id="${request.id}" data-status="rejected">Reject</button>
-            </div>
-          `
-          : request.status === "pending"
-            ? `<div class="card-actions"><button class="ghost-button" data-action="request-status" data-request-id="${request.id}" data-status="cancelled">Cancel request</button></div>`
-            : ""
-      }
+      ${renderRequestActions(request, role)}
     </article>
   `;
 }
@@ -2067,7 +2172,7 @@ function renderProviderInventory(items, editItem, route) {
             <label><span>Category</span><select name="category" data-unit-source>${renderOptionList(CATEGORY_OPTIONS, editItem?.category || "Prepared Food")}</select></label>
           </div>
           <label><span>Description</span><textarea name="description" rows="3">${escapeHtml(editItem?.description || "")}</textarea></label>
-          <label><span>Image URL (optional)</span><input name="imageUrl" type="url" value="${escapeHtml(editItem?.imageUrl || "")}" placeholder="https://example.com/food.jpg" /></label>
+          ${renderProviderImageFields(editItem)}
           <div class="three-column">
             <label><span>Quantity</span><input name="quantityAvailable" type="number" min="1" step="1" value="${escapeHtml(editItem?.quantityAvailable || 1)}" required /></label>
             <label><span>Unit</span><select name="unit" data-unit-target>${renderUnitOptions(editItem?.category || "Prepared Food", editItem?.unit || "boxes")}</select></label>
@@ -2170,7 +2275,7 @@ async function renderProviderPage(route) {
     "trash",
     "Trash and donation flow",
     `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Quick rescue listing</h2><p>${escapeHtml(note)}</p></div><form class="stack-form" data-form="provider-item"><label><span>Item name</span><input name="name" required placeholder="Event surplus or near-expiry item" /></label><div class="three-column"><label><span>Category</span><select name="category" data-unit-source>${renderOptionList(CATEGORY_OPTIONS, "Prepared Food")}</select></label><label><span>Quantity</span><input name="quantityAvailable" type="number" min="1" value="10" /></label><label><span>Unit</span><select name="unit" data-unit-target>${renderUnitOptions("Prepared Food", "packs")}</select></label></div><div class="three-column"><label><span>Listing type</span><select name="listingType"><option value="donation">Donation</option><option value="free_public">Free public</option></select></label><label><span>Audience</span><select name="audience"><option value="ngo">NGO</option><option value="both">Both</option><option value="consumer">Consumer</option></select></label><label class="checkbox-label"><input name="isPacked" type="checkbox" checked /><span>Packed item</span></label></div><label><span>Location</span><input name="locationText" value="${escapeHtml(state.me.address || "")}" /></label>
-          <label><span>Image URL (optional)</span><input name="imageUrl" type="url" placeholder="https://example.com/food.jpg" /></label><label><span>Available until</span><div class="date-input"><input name="availableUntil" type="datetime-local" /><button type="button" class="calendar-trigger" data-action="open-picker" aria-label="Open calendar"></button></div></label><label><span>Donor notes</span><textarea name="donorNotes" rows="3" placeholder="Access instructions or urgency"></textarea></label><button class="primary-button" type="submit">Publish rescue listing</button></form></article><article class="panel-card"><div class="panel-head"><h2>Donation activity</h2><p>Recent requests attached to your available rescue inventory.</p></div><div class="stack-list">${requestsResponse.requests.length ? requestsResponse.requests.map((request) => renderRequestCard(request, "provider")).join("") : renderEmptyCard("No donation requests", "Once NGOs start claiming items, threads will appear here.")}</div><div class="panel-head compact"><h3>Current donation-capable inventory</h3></div><div class="stack-list">${itemsResponse.items.filter((item) => item.listingType !== "sale" || item.audience !== "consumer").map((item) => renderItemTile(item, "provider")).join("") || renderEmptyCard("No rescue listings", "Add a donation or free-public listing to reduce waste.")}</div></article></section>`
+          ${renderProviderImageFields()}<label><span>Available until</span><div class="date-input"><input name="availableUntil" type="datetime-local" /><button type="button" class="calendar-trigger" data-action="open-picker" aria-label="Open calendar"></button></div></label><label><span>Donor notes</span><textarea name="donorNotes" rows="3" placeholder="Access instructions or urgency"></textarea></label><button class="primary-button" type="submit">Publish rescue listing</button></form></article><article class="panel-card"><div class="panel-head"><h2>Donation activity</h2><p>Recent requests attached to your available rescue inventory.</p></div><div class="stack-list">${requestsResponse.requests.length ? requestsResponse.requests.map((request) => renderRequestCard(request, "provider")).join("") : renderEmptyCard("No donation requests", "Once NGOs start claiming items, threads will appear here.")}</div><div class="panel-head compact"><h3>Current donation-capable inventory</h3></div><div class="stack-list">${itemsResponse.items.filter((item) => item.listingType !== "sale" || item.audience !== "consumer").map((item) => renderItemTile(item, "provider")).join("") || renderEmptyCard("No rescue listings", "Add a donation or free-public listing to reduce waste.")}</div></article></section>`
   );
 }
 
@@ -2215,7 +2320,7 @@ async function renderNgoPage(route) {
     "ngo",
     "discover",
     "Discover provider inventory",
-    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Search and filter</h2><p>Filter by category, expiry urgency, and distance if your profile has coordinates.</p></div><form class="stack-form" data-form="route-filter" data-role="ngo" data-page="discover"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><input name="category" value="${escapeHtml(category)}" placeholder="Prepared Food" /></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${selected ? `<div class="detail-panel">${selected.imageUrl ? `<div class="detail-media"><img src="${escapeHtml(selected.imageUrl)}" alt="${escapeHtml(selected.name)} photo" loading="lazy" /></div>` : ""}<h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description || "No description yet.")}</p><div class="meta-row"><span>${escapeHtml(selected.providerName)}</span><span>${escapeHtml(selected.providerPhone || "Phone pending")}</span><span>${escapeHtml(selected.locationText || selected.providerAddress || "Location pending")}</span></div><div class="meta-row"><span>${selected.isPacked ? "Packed" : "Unpacked"}</span><span>${formatDate(selected.expirationDate)}</span><span>${formatQty(selected.quantityAvailable, selected.unit)}</span></div><p class="muted">Notes: ${escapeHtml(selected.donorNotes || "No donor note")}</p><form class="stack-form" data-form="ngo-request"><input type="hidden" name="itemId" value="${selected.id}" /><div class="two-column"><label><span>Quantity</span><input name="quantity" type="number" min="1" max="${escapeHtml(selected.quantityAvailable)}" required /></label><label><span>Pickup start</span><input name="pickupWindowStart" type="datetime-local" /></label></div><label><span>Pickup end</span><input name="pickupWindowEnd" type="datetime-local" /></label><label><span>Message to provider</span><textarea name="note" rows="3" placeholder="Share vehicle type or timing"></textarea></label><button class="primary-button" type="submit">Request this item</button></form></div>` : renderEmptyCard("Select a listing", "Choose any result to view provider contact details and request a pickup.")}</article><article class="panel-card"><div class="panel-head"><h2>Available listings</h2><p>Results update from live provider inventory.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "ngo")).join("") : renderEmptyCard("No matches", "Try a wider expiry window or remove filters.")}</div></article></section>`
+    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Search and filter</h2><p>Filter by category, expiry urgency, and distance if your profile has coordinates.</p></div><form class="stack-form" data-form="route-filter" data-role="ngo" data-page="discover"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><input name="category" value="${escapeHtml(category)}" placeholder="Prepared Food" /></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${selected ? `<div class="detail-panel">${renderMediaGallery(selected)}<h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description || "No description yet.")}</p><div class="meta-row"><span>${escapeHtml(selected.providerName)}</span><span>${escapeHtml(selected.providerPhone || "Phone pending")}</span><span>${escapeHtml(selected.locationText || selected.providerAddress || "Location pending")}</span></div><div class="meta-row"><span>${selected.isPacked ? "Packed" : "Unpacked"}</span><span>${formatDate(selected.expirationDate)}</span><span>${formatQty(selected.quantityAvailable, selected.unit)}</span></div><p class="muted">Notes: ${escapeHtml(selected.donorNotes || "No donor note")}</p><form class="stack-form" data-form="ngo-request"><input type="hidden" name="itemId" value="${selected.id}" /><div class="two-column"><label><span>Quantity</span><input name="quantity" type="number" min="1" max="${escapeHtml(selected.quantityAvailable)}" required /></label><label><span>Pickup start</span><input name="pickupWindowStart" type="datetime-local" /></label></div><label><span>Pickup end</span><input name="pickupWindowEnd" type="datetime-local" /></label><label><span>Message to provider</span><textarea name="note" rows="3" placeholder="Share vehicle type or timing"></textarea></label><button class="primary-button" type="submit">Request this item</button></form></div>` : renderEmptyCard("Select a listing", "Choose any result to view provider contact details and request a pickup.")}</article><article class="panel-card"><div class="panel-head"><h2>Available listings</h2><p>Results update from live provider inventory.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "ngo")).join("") : renderEmptyCard("No matches", "Try a wider expiry window or remove filters.")}</div></article></section>`
   );
 }
 
@@ -2280,7 +2385,7 @@ async function renderConsumerPage(route) {
     "consumer",
     "browse",
     "Browse surplus food",
-    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Filters and item detail</h2><p>Browse free or priced items, then add quantities to your persistent cart.</p></div><form class="stack-form" data-form="route-filter" data-role="consumer" data-page="browse"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><input name="category" value="${escapeHtml(category)}" /></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${selected ? `<div class="detail-panel">${selected.imageUrl ? `<div class="detail-media"><img src="${escapeHtml(selected.imageUrl)}" alt="${escapeHtml(selected.name)} photo" loading="lazy" /></div>` : ""}<h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description || "No description yet.")}</p><div class="meta-row"><span>${formatMoney(selected.pricePerUnit)}</span><span>${escapeHtml(selected.providerName)}</span><span>${escapeHtml(selected.providerPhone || "Phone pending")}</span></div><div class="meta-row"><span>${formatQty(selected.quantityAvailable, selected.unit)}</span><span>${formatDate(selected.expirationDate)}</span><span>${selected.isPacked ? "Packed" : "Unpacked"}</span></div><p class="muted">${escapeHtml(selected.locationText || selected.providerAddress || "Pickup location pending")}</p><form class="stack-form" data-form="cart-add"><input type="hidden" name="itemId" value="${selected.id}" /><label><span>Quantity</span><input name="quantity" type="number" min="1" max="${escapeHtml(selected.quantityAvailable)}" required /></label><button class="primary-button" type="submit">Add to cart</button></form></div>` : renderEmptyCard("Select a listing", "Choose any card to view pickup details and add it to your cart.")}</article><article class="panel-card"><div class="panel-head"><h2>Available food</h2><p>Free items are marked accordingly. Paid items stay in a reserve-only checkout flow.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "consumer")).join("") : renderEmptyCard("No items found", "Try loosening your search or distance filters.")}</div></article></section>`
+    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Filters and item detail</h2><p>Browse free or priced items, then add quantities to your persistent cart.</p></div><form class="stack-form" data-form="route-filter" data-role="consumer" data-page="browse"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><input name="category" value="${escapeHtml(category)}" /></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${selected ? `<div class="detail-panel">${renderMediaGallery(selected)}<h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description || "No description yet.")}</p><div class="meta-row"><span>${formatMoney(selected.pricePerUnit)}</span><span>${escapeHtml(selected.providerName)}</span><span>${escapeHtml(selected.providerPhone || "Phone pending")}</span></div><div class="meta-row"><span>${formatQty(selected.quantityAvailable, selected.unit)}</span><span>${formatDate(selected.expirationDate)}</span><span>${selected.isPacked ? "Packed" : "Unpacked"}</span></div><p class="muted">${escapeHtml(selected.locationText || selected.providerAddress || "Pickup location pending")}</p><form class="stack-form" data-form="cart-add"><input type="hidden" name="itemId" value="${selected.id}" /><label><span>Quantity</span><input name="quantity" type="number" min="1" max="${escapeHtml(selected.quantityAvailable)}" required /></label><button class="primary-button" type="submit">Add to cart</button></form></div>` : renderEmptyCard("Select a listing", "Choose any card to view pickup details and add it to your cart.")}</article><article class="panel-card"><div class="panel-head"><h2>Available food</h2><p>Free items are marked accordingly. Paid items stay in a reserve-only checkout flow.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "consumer")).join("") : renderEmptyCard("No items found", "Try loosening your search or distance filters.")}</div></article></section>`
   );
 }
 
@@ -2355,7 +2460,7 @@ function hydrateVisualEnhancements() {
     );
 
     motionTargets.forEach((element) => motion.observer.observe(element));
-  }
+  }
 }
 
 function handleTiltMove(event) {
@@ -2468,6 +2573,10 @@ async function handleSubmit(event) {
         ...data,
         isPacked: formData.get("isPacked") === "on"
       };
+      delete payload.imageFile;
+      delete payload.barcodeImageFile;
+      Object.assign(payload, await resolveProviderImagePayload(form, formData));
+
       const itemId = data.itemId;
       if (itemId) {
         await api(`/api/items/${itemId}`, { method: "PUT", body: payload });
@@ -2645,6 +2754,7 @@ async function bootstrap() {
 }
 
 bootstrap();
+
 
 
 
