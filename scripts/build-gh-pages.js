@@ -519,6 +519,7 @@ function buildDemoReservationView(store, reservation) {
     note: reservation.note,
     status: reservation.status,
     locationText: item?.locationText || provider?.address || "",
+    imageUrl: item?.imageUrl || "",
     expiresAt: reservation.expiresAt,
     pricePerUnit: item?.pricePerUnit || 0,
     createdAt: reservation.createdAt
@@ -539,6 +540,7 @@ function getDemoCart(store, consumerId) {
         unit: item?.unit || "units",
         pricePerUnit: item?.pricePerUnit || 0,
         expirationDate: item?.expirationDate || null,
+        imageUrl: item?.imageUrl || "",
         providerName: provider?.displayName || "Provider",
         locationText: item?.locationText || provider?.address || "",
         lineTotal: Number(((item?.pricePerUnit || 0) * entry.quantity).toFixed(2))

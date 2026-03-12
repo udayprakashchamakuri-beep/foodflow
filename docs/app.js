@@ -641,6 +641,7 @@ function buildDemoReservationView(store, reservation) {
     note: reservation.note,
     status: reservation.status,
     locationText: item?.locationText || provider?.address || "",
+    imageUrl: item?.imageUrl || "",
     expiresAt: reservation.expiresAt,
     pricePerUnit: item?.pricePerUnit || 0,
     createdAt: reservation.createdAt
@@ -661,6 +662,7 @@ function getDemoCart(store, consumerId) {
         unit: item?.unit || "units",
         pricePerUnit: item?.pricePerUnit || 0,
         expirationDate: item?.expirationDate || null,
+        imageUrl: item?.imageUrl || "",
         providerName: provider?.displayName || "Provider",
         locationText: item?.locationText || provider?.address || "",
         lineTotal: Number(((item?.pricePerUnit || 0) * entry.quantity).toFixed(2))
@@ -1755,15 +1757,19 @@ function renderEmptyCard(title, message) {
   `;
 }
 
+function renderCardImage(imageUrl, name) {
+  return imageUrl
+    ? `<div class="item-thumb"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)} photo" loading="lazy" /></div>`
+    : "";
+}
+
 function renderItemTile(item, mode) {
   const detailAction =
     mode === "provider"
       ? `href="${buildHash("provider", "inventory", { edit: item.id })}"`
       : `href="${buildHash(mode, mode === "consumer" ? "browse" : "discover", { item: item.id })}"`;
 
-  const imageMarkup = item.imageUrl
-    ? `<div class="item-thumb"><img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.name)} photo" loading="lazy" /></div>`
-    : "";
+  const imageMarkup = renderCardImage(item.imageUrl, item.name);
 
   return `
     <article class="list-card atmospheric-card">
@@ -1857,6 +1863,8 @@ function renderRequestCard(request, role) {
 }
 
 function renderReservationCard(reservation, role) {
+  const imageMarkup = renderCardImage(reservation.imageUrl, reservation.itemName);
+
   return `
     <article class="list-card atmospheric-card">
       ${imageMarkup}
@@ -2065,7 +2073,7 @@ function renderProviderInventory(items, editItem, route) {
             <label><span>Unit</span><select name="unit" data-unit-target>${renderUnitOptions(editItem?.category || "Prepared Food", editItem?.unit || "boxes")}</select></label>
             <label><span>Price per unit</span><input name="pricePerUnit" type="number" min="0" step="1" value="${escapeHtml(editItem?.pricePerUnit || 0)}" /></label>
           </div>
-          <div class="three-column">
+          <div class="date-grid">
             <label><span>Expiration</span><div class="date-input"><input name="expirationDate" type="datetime-local" value="${editItem?.expirationDate ? new Date(editItem.expirationDate).toISOString().slice(0, 16) : ""}" /><button type="button" class="calendar-trigger" data-action="open-picker" aria-label="Open calendar"></button></div></label>
             <label><span>Available from</span><div class="date-input"><input name="availableFrom" type="datetime-local" value="${editItem?.availableFrom ? new Date(editItem.availableFrom).toISOString().slice(0, 16) : ""}" /><button type="button" class="calendar-trigger" data-action="open-picker" aria-label="Open calendar"></button></div></label>
             <label><span>Available until</span><div class="date-input"><input name="availableUntil" type="datetime-local" value="${editItem?.availableUntil ? new Date(editItem.availableUntil).toISOString().slice(0, 16) : ""}" /><button type="button" class="calendar-trigger" data-action="open-picker" aria-label="Open calendar"></button></div></label>
@@ -2150,7 +2158,7 @@ async function renderProviderPage(route) {
       "network",
       "Provider coordination network",
       `<section class="panel-card"><div class="panel-head"><h2>Other providers nearby</h2><p>Useful for load balancing or cross-referrals when NGOs need more volume.</p></div><div class="stack-list">${response.providers.length ? response.providers.map((provider) => `<article class="list-card atmospheric-card">
-      ${imageMarkup}<div class="list-card-head"><div><h3>${escapeHtml(provider.display_name)}</h3><p>${escapeHtml(provider.business_type || "provider")}</p></div><strong>${escapeHtml(String(provider.active_listings))} active listings</strong></div><div class="meta-row"><span>${escapeHtml(provider.contact_name || "No contact")}</span><span>${escapeHtml(provider.phone || "Phone pending")}</span><span>${escapeHtml(provider.address || "Address pending")}</span></div></article>`).join("") : renderEmptyCard("No peers yet", "As more providers join, this directory becomes a coordination layer.")}</div></section>`
+      <div class="list-card-head"><div><h3>${escapeHtml(provider.display_name)}</h3><p>${escapeHtml(provider.business_type || "provider")}</p></div><strong>${escapeHtml(String(provider.active_listings))} active listings</strong></div><div class="meta-row"><span>${escapeHtml(provider.contact_name || "No contact")}</span><span>${escapeHtml(provider.phone || "Phone pending")}</span><span>${escapeHtml(provider.address || "Address pending")}</span></div></article>`).join("") : renderEmptyCard("No peers yet", "As more providers join, this directory becomes a coordination layer.")}</div></section>`
     );
   }
 
@@ -2235,7 +2243,7 @@ async function renderConsumerPage(route) {
       "cart",
       "Your cart",
       `<section class="panel-card"><div class="panel-head"><h2>Persistent cart</h2><p>Quantities stay saved to your account until you reserve or remove them.</p></div><div class="stack-list">${response.cart.items.length ? response.cart.items.map((item) => `<article class="list-card atmospheric-card">
-      ${imageMarkup}<div class="list-card-head"><div><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.providerName)} | ${formatMoney(item.pricePerUnit)}</p></div><strong>${formatMoney(item.lineTotal)}</strong></div><div class="meta-row"><span>Available: ${formatQty(item.availableQuantity, item.unit)}</span><span>${formatDate(item.expirationDate)}</span><span>${escapeHtml(item.locationText || "Location pending")}</span></div><form class="inline-form compact-grid" data-form="cart-update"><input type="hidden" name="itemId" value="${item.itemId}" /><label><span>Quantity</span><input name="quantity" type="number" min="0" max="${escapeHtml(item.availableQuantity)}" value="${escapeHtml(item.quantity)}" /></label><button class="ghost-button" type="submit">Update</button><button class="ghost-button" type="button" data-action="remove-cart-item" data-item-id="${item.itemId}">Remove</button></form></article>`).join("") : renderEmptyCard("Cart is empty", "Add items from Browse to reserve them later.")}</div><div class="summary-strip"><strong>Total items: ${escapeHtml(String(response.cart.totalItems))}</strong><strong>Total: ${formatMoney(response.cart.totalAmount)}</strong><a class="primary-button" href="${buildHash("consumer", "checkout")}">Go to checkout</a></div></section>`
+      ${renderCardImage(item.imageUrl, item.name)}<div class="list-card-head"><div><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.providerName)} | ${formatMoney(item.pricePerUnit)}</p></div><strong>${formatMoney(item.lineTotal)}</strong></div><div class="meta-row"><span>Available: ${formatQty(item.availableQuantity, item.unit)}</span><span>${formatDate(item.expirationDate)}</span><span>${escapeHtml(item.locationText || "Location pending")}</span></div><form class="inline-form compact-grid" data-form="cart-update"><input type="hidden" name="itemId" value="${item.itemId}" /><label><span>Quantity</span><input name="quantity" type="number" min="0" max="${escapeHtml(item.availableQuantity)}" value="${escapeHtml(item.quantity)}" /></label><button class="ghost-button" type="submit">Update</button><button class="ghost-button" type="button" data-action="remove-cart-item" data-item-id="${item.itemId}">Remove</button></form></article>`).join("") : renderEmptyCard("Cart is empty", "Add items from Browse to reserve them later.")}</div><div class="summary-strip"><strong>Total items: ${escapeHtml(String(response.cart.totalItems))}</strong><strong>Total: ${formatMoney(response.cart.totalAmount)}</strong><a class="primary-button" href="${buildHash("consumer", "checkout")}">Go to checkout</a></div></section>`
     );
   }
 
@@ -2246,7 +2254,7 @@ async function renderConsumerPage(route) {
       "checkout",
       "Reserve items",
       `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Order summary</h2><p>No payment is taken in MVP mode. Reservation simply holds stock for collection.</p></div><div class="stack-list">${response.cart.items.length ? response.cart.items.map((item) => `<article class="list-card atmospheric-card">
-      ${imageMarkup}<div class="list-card-head"><div><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.providerName)}</p></div><strong>${formatMoney(item.lineTotal)}</strong></div><div class="meta-row"><span>${formatQty(item.quantity, item.unit)}</span><span>${formatDate(item.expirationDate)}</span></div></article>`).join("") : renderEmptyCard("Nothing to checkout", "Add some items to your cart first.")}</div></article><article class="panel-card"><div class="panel-head"><h2>Reserve for pickup</h2><p>Providers will see your reservation and you can mark it collected later.</p></div><form class="stack-form" data-form="checkout"><label><span>Pickup note</span><textarea name="note" rows="4" placeholder="Share preferred pickup time or a contact note"></textarea></label><div class="summary-strip"><strong>Total: ${formatMoney(response.cart.totalAmount)}</strong><button class="primary-button" type="submit" ${response.cart.items.length ? "" : "disabled"}>Reserve items</button></div></form></article></section>`
+      ${renderCardImage(item.imageUrl, item.name)}<div class="list-card-head"><div><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.providerName)}</p></div><strong>${formatMoney(item.lineTotal)}</strong></div><div class="meta-row"><span>${formatQty(item.quantity, item.unit)}</span><span>${formatDate(item.expirationDate)}</span></div></article>`).join("") : renderEmptyCard("Nothing to checkout", "Add some items to your cart first.")}</div></article><article class="panel-card"><div class="panel-head"><h2>Reserve for pickup</h2><p>Providers will see your reservation and you can mark it collected later.</p></div><form class="stack-form" data-form="checkout"><label><span>Pickup note</span><textarea name="note" rows="4" placeholder="Share preferred pickup time or a contact note"></textarea></label><div class="summary-strip"><strong>Total: ${formatMoney(response.cart.totalAmount)}</strong><button class="primary-button" type="submit" ${response.cart.items.length ? "" : "disabled"}>Reserve items</button></div></form></article></section>`
     );
   }
 

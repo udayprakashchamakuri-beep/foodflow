@@ -908,6 +908,7 @@ function getReservationsForUser(db, user) {
             items.provider_id,
             items.location_text,
             items.price_per_unit,
+            items.image_url,
             providers.display_name AS provider_name,
             providers.contact_name AS provider_contact,
             providers.phone AS provider_phone
@@ -925,6 +926,7 @@ function getReservationsForUser(db, user) {
             items.provider_id,
             items.location_text,
             items.price_per_unit,
+            items.image_url,
             providers.display_name AS provider_name,
             providers.contact_name AS provider_contact,
             providers.phone AS provider_phone,
@@ -953,6 +955,7 @@ function getReservationsForUser(db, user) {
     note: row.note,
     status: row.status,
     locationText: row.location_text,
+    imageUrl: row.image_url,
     expiresAt: row.expires_at,
     pricePerUnit: row.price_per_unit,
     createdAt: row.created_at
@@ -969,6 +972,7 @@ function getCart(db, consumerId) {
       items.price_per_unit,
       items.expiration_date,
       items.location_text,
+      items.image_url,
       providers.display_name AS provider_name
     FROM cart_items
     JOIN items ON items.id = cart_items.item_id
@@ -983,6 +987,7 @@ function getCart(db, consumerId) {
     unit: row.unit,
     pricePerUnit: row.price_per_unit,
     expirationDate: row.expiration_date,
+    imageUrl: row.image_url,
     providerName: row.provider_name,
     locationText: row.location_text,
     lineTotal: Number((row.quantity * row.price_per_unit).toFixed(2))
