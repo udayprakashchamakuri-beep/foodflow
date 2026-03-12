@@ -6,10 +6,6 @@ const state = {
   shortcutsOpen: false
 };
 
-const motion = {
-  observer: null,
-  reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-};
 
 
 const cursorHalo = {
@@ -1341,7 +1337,6 @@ async function bootstrap() {
 }
 
 bootstrap();
-
 
 
 
