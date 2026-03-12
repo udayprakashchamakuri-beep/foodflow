@@ -316,6 +316,19 @@ function openDatabase() {
       FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      recipient_user_id INTEGER NOT NULL,
+      provider_id INTEGER NOT NULL,
+      item_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (recipient_user_id) REFERENCES users (id) ON DELETE CASCADE,
+      FOREIGN KEY (provider_id) REFERENCES users (id) ON DELETE CASCADE,
+      FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_items_provider ON items (provider_id);
     CREATE INDEX IF NOT EXISTS idx_items_status ON items (status);
     CREATE INDEX IF NOT EXISTS idx_items_expiration ON items (expiration_date);
@@ -323,6 +336,7 @@ function openDatabase() {
     CREATE INDEX IF NOT EXISTS idx_requests_item ON ngo_requests (item_id);
     CREATE INDEX IF NOT EXISTS idx_reservations_consumer ON reservations (consumer_id);
     CREATE INDEX IF NOT EXISTS idx_transactions_provider ON transactions (provider_id);
+    CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications (recipient_user_id, created_at DESC);
   `);
 
   try {
@@ -1062,6 +1076,111 @@ function getCart(db, consumerId) {
   };
 }
 
+function getNotificationTargetRoles(item) {
+  if (!item) {
+    return [];
+  }
+
+  if (item.audience === "ngo") {
+    return ["ngo"];
+  }
+
+  if (item.audience === "consumer") {
+    return ["consumer"];
+  }
+
+  return ["ngo", "consumer"];
+}
+
+function getNotificationsForUser(db, userId, limit = 6) {
+  return db.prepare(`
+    SELECT
+      notifications.*,
+      items.name AS item_name,
+      items.location_text,
+      providers.display_name AS provider_name
+    FROM notifications
+    JOIN items ON items.id = notifications.item_id
+    JOIN users AS providers ON providers.id = notifications.provider_id
+    WHERE notifications.recipient_user_id = ?
+    ORDER BY notifications.created_at DESC
+    LIMIT ?
+  `).all(userId, limit).map((row) => ({
+    id: row.id,
+    itemId: row.item_id,
+    providerId: row.provider_id,
+    providerName: row.provider_name,
+    itemName: row.item_name,
+    title: row.title,
+    message: row.message,
+    locationText: row.location_text,
+    createdAt: row.created_at
+  }));
+}
+
+function createNearbyNotifications(db, itemId) {
+  const item = db.prepare(`
+    SELECT
+      items.id,
+      items.provider_id,
+      items.name,
+      items.audience,
+      items.location_text,
+      items.available_until,
+      items.latitude,
+      items.longitude,
+      providers.display_name AS provider_name,
+      providers.latitude AS provider_latitude,
+      providers.longitude AS provider_longitude
+    FROM items
+    JOIN users AS providers ON providers.id = items.provider_id
+    WHERE items.id = ?
+  `).get(itemId);
+
+  if (!item) {
+    return;
+  }
+
+  const sourceLat = item.latitude ?? item.provider_latitude;
+  const sourceLng = item.longitude ?? item.provider_longitude;
+  const targetRoles = getNotificationTargetRoles(item);
+  if (!targetRoles.length || sourceLat === null || sourceLng === null) {
+    return;
+  }
+
+  const candidates = db.prepare(`
+    SELECT id, role, latitude, longitude
+    FROM users
+    WHERE id != ? AND role IN ('ngo', 'consumer')
+  `).all(item.provider_id);
+
+  const insertNotification = db.prepare(`
+    INSERT INTO notifications (recipient_user_id, provider_id, item_id, title, message, created_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+
+  const expiresLabel = item.available_until
+    ? new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.available_until))
+    : "soon";
+  const title = `${item.provider_name} posted a quick rescue alert`;
+  const message = `${item.name} is available near ${item.location_text || "the pickup point"} until ${expiresLabel}.`;
+
+  candidates
+    .filter((candidate) => targetRoles.includes(candidate.role))
+    .forEach((candidate) => {
+      if (candidate.latitude === null || candidate.longitude === null) {
+        return;
+      }
+
+      const distanceKm = haversineDistanceKm(candidate.latitude, candidate.longitude, sourceLat, sourceLng);
+      if (distanceKm === null || distanceKm > 15) {
+        return;
+      }
+
+      insertNotification.run(candidate.id, item.provider_id, item.id, title, message, nowIso());
+    });
+}
+
 function getLeaderboards(db) {
   const providerLeaderboard = db.prepare(`
     SELECT
@@ -1345,6 +1464,15 @@ addRoute("GET", /^\/api\/dashboard$/, async (req, res, db) => {
   sendJson(res, 200, { user: serializeUser(user), ...getDashboard(db, user) });
 });
 
+addRoute("GET", /^\/api\/notifications$/, async (req, res, db) => {
+  const user = requireUser(db, req, res, ["ngo", "consumer"]);
+  if (!user) {
+    return;
+  }
+
+  sendJson(res, 200, { notifications: getNotificationsForUser(db, user.id) });
+});
+
 addRoute("GET", /^\/api\/providers\/network$/, async (req, res, db) => {
   const user = requireUser(db, req, res, ["provider"]);
   if (!user) {
@@ -1454,6 +1582,10 @@ addRoute("POST", /^\/api\/items$/, async (req, res, db) => {
     imageUrl: String(body.imageUrl || "").trim(),
     barcodeImageUrl: String(body.barcodeImageUrl || "").trim()
   });
+
+  if (String(body.source || "").trim() === "quick_rescue") {
+    createNearbyNotifications(db, itemId);
+  }
 
   sendJson(res, 201, { item: getItemById(db, itemId, user) });
 });

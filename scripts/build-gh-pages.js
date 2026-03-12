@@ -5,13 +5,13 @@ const ROOT = process.cwd();
 const PUBLIC_DIR = path.join(ROOT, "public");
 const DOCS_DIR = path.join(ROOT, "docs");
 
-const DEMO_STORAGE_KEY = "foodflow-demo-db-v3";
-const DEMO_SESSION_KEY = "foodflow-demo-session-v3";
+const DEMO_STORAGE_KEY = "foodflow-demo-db-v4";
+const DEMO_SESSION_KEY = "foodflow-demo-session-v4";
 
 function buildDemoApiSource() {
   return String.raw`const DEMO_STORAGE_KEY = "${DEMO_STORAGE_KEY}";
 const DEMO_SESSION_KEY = "${DEMO_SESSION_KEY}";
-const DEMO_VERSION = 3;
+const DEMO_VERSION = 4;
 
 function demoNowIso() {
   return new Date().toISOString();
@@ -356,6 +356,7 @@ function createDemoSeed() {
     requests,
     reservations,
     transactions,
+    notifications: [],
     cartItems: [],
     counters: {
       users: 7,
@@ -363,7 +364,8 @@ function createDemoSeed() {
       requests: 3,
       messages: 3,
       reservations: 2,
-      transactions: 4
+      transactions: 4,
+      notifications: 1
     }
   };
 }
@@ -567,6 +569,83 @@ function getDemoCart(store, consumerId) {
     totalItems: items.reduce((sum, item) => sum + item.quantity, 0),
     totalAmount: Number(items.reduce((sum, item) => sum + item.lineTotal, 0).toFixed(2))
   };
+}
+
+function getDemoNotificationTargetRoles(item) {
+  if (!item) {
+    return [];
+  }
+
+  if (item.audience === "ngo") {
+    return ["ngo"];
+  }
+
+  if (item.audience === "consumer") {
+    return ["consumer"];
+  }
+
+  return ["ngo", "consumer"];
+}
+
+function getDemoNotificationsForUser(store, userId, limit = 6) {
+  return store.notifications
+    .filter((entry) => entry.recipientUserId === userId)
+    .map((entry) => {
+      const item = store.items.find((candidate) => candidate.id === entry.itemId);
+      const provider = item ? getDemoUser(store, item.providerId) : getDemoUser(store, entry.providerId);
+      return {
+        id: entry.id,
+        itemId: entry.itemId,
+        providerId: entry.providerId,
+        providerName: provider?.displayName || "Provider",
+        itemName: item?.name || "Item",
+        title: entry.title,
+        message: entry.message,
+        locationText: item?.locationText || provider?.address || "",
+        createdAt: entry.createdAt
+      };
+    })
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+    .slice(0, limit);
+}
+
+function createNearbyDemoNotifications(store, item) {
+  const provider = getDemoUser(store, item.providerId);
+  const sourceLat = item.latitude ?? provider?.latitude ?? null;
+  const sourceLng = item.longitude ?? provider?.longitude ?? null;
+  const targetRoles = getDemoNotificationTargetRoles(item);
+  if (!targetRoles.length || sourceLat === null || sourceLng === null) {
+    return;
+  }
+
+  const expiresLabel = item.availableUntil
+    ? new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.availableUntil))
+    : "soon";
+  const title = (provider?.displayName || "Provider") + " posted a quick rescue alert";
+  const message = item.name + " is available near " + (item.locationText || "the pickup point") + " until " + expiresLabel + ".";
+
+  store.users
+    .filter((user) => user.id !== item.providerId && targetRoles.includes(user.role))
+    .forEach((user) => {
+      if (user.latitude === null || user.longitude === null) {
+        return;
+      }
+
+      const distanceKm = demoHaversineDistanceKm(user.latitude, user.longitude, sourceLat, sourceLng);
+      if (distanceKm === null || distanceKm > 15) {
+        return;
+      }
+
+      store.notifications.push({
+        id: nextDemoId(store, "notifications"),
+        recipientUserId: user.id,
+        providerId: item.providerId,
+        itemId: item.id,
+        title,
+        message,
+        createdAt: demoNowIso()
+      });
+    });
 }
 
 function getDemoLeaderboards(store) {
@@ -863,6 +942,11 @@ async function api(path, options = {}) {
     return demoClone({ user: serializeDemoUser(user), ...buildDemoDashboard(store, user) });
   }
 
+  if (url.pathname === "/api/notifications" && method === "GET") {
+    const user = requireDemoUser(store, ["ngo", "consumer"]);
+    return demoClone({ notifications: getDemoNotificationsForUser(store, user.id) });
+  }
+
   if (url.pathname === "/api/providers/network" && method === "GET") {
     const user = requireDemoUser(store, ["provider"]);
     const providers = store.users
@@ -946,6 +1030,9 @@ async function api(path, options = {}) {
       barcodeImageUrl: String(body.barcodeImageUrl || "").trim()
     };
     store.items.push(item);
+    if (String(body.source || "").trim() === "quick_rescue") {
+      createNearbyDemoNotifications(store, item);
+    }
     saveDemoStore(store);
     return demoClone({ item: buildDemoItemView(store, item, user) });
   }
