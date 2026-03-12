@@ -1941,7 +1941,9 @@ function renderItemTile(item, mode, params = null) {
   const detailAction =
     mode === "provider"
       ? `href="${buildHash("provider", "inventory", { edit: item.id })}"`
-      : `href="${buildHash(mode, mode === "consumer" ? "browse" : "discover", detailParams)}"`;
+      : mode === "ngo"
+        ? `href="${buildHash("ngo", "detail", detailParams)}"`
+        : `href="${buildHash(mode, "browse", detailParams)}"`;
 
   const imageMarkup = renderCardImage(item.imageUrl || item.barcodeImageUrl, item.name);
 
@@ -2423,22 +2425,41 @@ async function renderNgoPage(route) {
     );
   }
 
+  if (route.page === "detail") {
+    const itemId = route.params.get("item");
+    if (!itemId) {
+      return renderShell("ngo", "discover", "Item detail", renderEmptyCard("Select a listing", "Open any item from Discover to view the full provider details."));
+    }
+
+    const response = await api(`/api/items/${itemId}`);
+    const item = response.item;
+    const requestOpen = route.params.get("request") === "open";
+    const backParams = Object.fromEntries(route.params.entries());
+    delete backParams.item;
+    delete backParams.request;
+
+    return renderShell(
+      "ngo",
+      "discover",
+      "Listing detail",
+      `<section class="content-grid two-pane ngo-detail-layout"><article class="panel-card detail-panel ngo-detail-panel">${renderMediaGallery(item)}<div class="panel-head"><div><p class="eyebrow">Provider listing</p><h2>${escapeHtml(item.name)}</h2></div>${badge(item.status)}</div><p>${escapeHtml(item.description || "No description yet.")}</p><div class="meta-row"><span>${escapeHtml(item.category)}</span><span>${item.isPacked ? "Packed" : "Unpacked"}</span><span>${formatQty(item.quantityAvailable, item.unit)}</span><span>${formatDate(item.expirationDate)}</span></div><div class="meta-row"><span>${escapeHtml(item.providerName)}</span><span>${escapeHtml(item.providerPhone || "Phone pending")}</span><span>${escapeHtml(item.locationText || item.providerAddress || "Location pending")}</span></div><p class="muted">Donor notes: ${escapeHtml(item.donorNotes || "No donor note")}</p><div class="card-actions"><a class="ghost-button" href="${buildHash("ngo", "discover", backParams)}">Back to discover</a>${requestOpen ? `<a class="ghost-button" href="${buildHash("ngo", "detail", { ...backParams, item: item.id })}">Cancel request</a>` : `<a class="primary-button" href="${buildHash("ngo", "detail", { ...backParams, item: item.id, request: "open" })}">Request item</a>`}</div>${requestOpen ? `<form class="stack-form ngo-request-panel" data-form="ngo-request"><input type="hidden" name="itemId" value="${item.id}" /><div class="two-column"><label><span>Quantity</span><input name="quantity" type="number" min="1" max="${escapeHtml(item.quantityAvailable)}" required /></label><label><span>Pickup by</span><div class="date-input"><input name="pickupWindowStart" type="datetime-local" required /><button type="button" class="calendar-trigger" data-action="open-picker" aria-label="Open calendar"></button></div></label></div><label><span>Message to provider (optional)</span><textarea name="note" rows="3" placeholder="Share vehicle type, team size, or pickup instructions"></textarea></label><button class="primary-button" type="submit">Send request</button></form>` : ""}</article><article class="panel-card"><div class="panel-head"><h2>Pickup guidance</h2><p>Confirm quantity first, then share your expected arrival time so the provider can prepare handoff.</p></div><div class="stack-list"><article class="empty-card atmospheric-card"><h3>What to check</h3><p>Verify expiry timing, packaging condition, pickup address, and phone contact before dispatching your team.</p></article><article class="empty-card atmospheric-card"><h3>Provider contact</h3><p>${escapeHtml(item.providerContact || item.providerName)}</p><p>${escapeHtml(item.providerPhone || "Phone pending")}</p><p>${escapeHtml(item.providerAddress || item.locationText || "Location pending")}</p></article></div></article></section>`
+    );
+  }
+
   const search = route.params.get("search") || "";
   const category = route.params.get("category") || "";
   const expirationDays = route.params.get("expirationDays") || "";
   const distanceKm = route.params.get("distanceKm") || "";
   const sort = route.params.get("sort") || "";
   const response = await api(`/api/items?audience=ngo&search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}&expirationDays=${encodeURIComponent(expirationDays)}&distanceKm=${encodeURIComponent(distanceKm)}&sort=${encodeURIComponent(sort)}`);
-  const selected = response.items.find((item) => String(item.id) === route.params.get("item"));
 
   return renderShell(
     "ngo",
     "discover",
     "Discover provider inventory",
-    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Search and filter</h2><p>Filter by category, expiry urgency, and distance if your profile has coordinates.</p></div><form class="stack-form" data-form="route-filter" data-role="ngo" data-page="discover"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><input name="category" value="${escapeHtml(category)}" placeholder="Prepared Food" /></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${selected ? `<div class="detail-panel">${renderMediaGallery(selected)}<h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description || "No description yet.")}</p><div class="meta-row"><span>${escapeHtml(selected.providerName)}</span><span>${escapeHtml(selected.providerPhone || "Phone pending")}</span><span>${escapeHtml(selected.locationText || selected.providerAddress || "Location pending")}</span></div><div class="meta-row"><span>${selected.isPacked ? "Packed" : "Unpacked"}</span><span>${formatDate(selected.expirationDate)}</span><span>${formatQty(selected.quantityAvailable, selected.unit)}</span></div><p class="muted">Notes: ${escapeHtml(selected.donorNotes || "No donor note")}</p><form class="stack-form" data-form="ngo-request"><input type="hidden" name="itemId" value="${selected.id}" /><div class="two-column"><label><span>Quantity</span><input name="quantity" type="number" min="1" max="${escapeHtml(selected.quantityAvailable)}" required /></label><label><span>Pickup start</span><input name="pickupWindowStart" type="datetime-local" /></label></div><label><span>Pickup end</span><input name="pickupWindowEnd" type="datetime-local" /></label><label><span>Message to provider</span><textarea name="note" rows="3" placeholder="Share vehicle type or timing"></textarea></label><button class="primary-button" type="submit">Request this item</button></form></div>` : renderEmptyCard("Select a listing", "Choose any result to view provider contact details and request a pickup.")}</article><article class="panel-card"><div class="panel-head"><h2>Available listings</h2><p>Results update from live provider inventory.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "ngo", Object.fromEntries(route.params.entries()))).join("") : renderEmptyCard("No matches", "Try a wider expiry window or remove filters.")}</div></article></section>`
+    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Search and filter</h2><p>Filter by category, expiry urgency, and distance if your profile has coordinates.</p></div><form class="stack-form" data-form="route-filter" data-role="ngo" data-page="discover"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><input name="category" value="${escapeHtml(category)}" placeholder="Prepared Food" /></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${renderEmptyCard("Open a listing", "Press View details on any result to open the full item page and send a pickup request.")}</article><article class="panel-card"><div class="panel-head"><h2>Available listings</h2><p>Results update from live provider inventory.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "ngo", Object.fromEntries(route.params.entries()))).join("") : renderEmptyCard("No matches", "Try a wider expiry window or remove filters.")}</div></article></section>`
   );
 }
-
 async function renderConsumerPage(route) {
   if (route.page === "home") {
     const dashboard = await api("/api/dashboard");
@@ -2541,7 +2562,7 @@ async function renderRoute() {
   hydrateVisualEnhancements();
   focusShortcutDialogIfNeeded();
 
-  if ((route.role === "ngo" || route.role === "consumer") && route.params.get("item")) {
+  if (route.role === "consumer" && route.params.get("item")) {
     const detailPanel = document.querySelector(".detail-panel");
     if (detailPanel instanceof HTMLElement) {
       detailPanel.scrollIntoView({
@@ -2892,6 +2913,7 @@ async function bootstrap() {
 }
 
 bootstrap();
+
 
 
 
