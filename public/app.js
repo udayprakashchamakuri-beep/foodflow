@@ -993,60 +993,58 @@ function formatHomeHighlight(value) {
 
 function renderHomeShowcaseVisual() {
   return `
-    <div class="home-network-visual" aria-hidden="true">
-      <div class="home-network-ring home-network-ring-one"></div>
-      <div class="home-network-ring home-network-ring-two"></div>
-      <article class="network-node node-restaurant">
-        <span class="network-node-icon">R</span>
-        <strong>Restaurants</strong>
-        <small>Same-day surplus meals</small>
+    <div class="image-home-visual" aria-hidden="true">
+      <article class="showcase-tile tile-kitchen">
+        <span class="showcase-emoji">??</span>
+        <strong>Restaurant</strong>
+        <small>Fresh surplus meals</small>
       </article>
-      <article class="network-node node-grocery">
-        <span class="network-node-icon">G</span>
-        <strong>Groceries</strong>
-        <small>Near-expiry produce</small>
+      <article class="showcase-tile tile-grocery">
+        <span class="showcase-emoji">??</span>
+        <strong>Grocery</strong>
+        <small>Near-expiry stock</small>
       </article>
-      <article class="network-node node-banquet">
-        <span class="network-node-icon">B</span>
-        <strong>Banquet halls</strong>
-        <small>Event rescue listings</small>
+      <article class="showcase-tile tile-shelf">
+        <span class="showcase-emoji">??</span>
+        <strong>Storefront</strong>
+        <small>Live pickup point</small>
       </article>
-      <article class="network-node node-ngo">
-        <span class="network-node-icon">N</span>
-        <strong>NGOs</strong>
-        <small>Request and distribute</small>
+      <article class="showcase-tile tile-ngo">
+        <span class="showcase-emoji">??</span>
+        <strong>NGO</strong>
+        <small>Distribution network</small>
       </article>
-      <div class="network-core-badge">
-        <span class="network-core-mark">FF</span>
-        <strong>FoodFlow Connect</strong>
-        <small>Coordinated rescue loop</small>
+      <div class="showcase-cloud-core">
+        <span class="showcase-cloud-mark">FF</span>
+        <strong>FoodFlow</strong>
+        <small>Connect</small>
       </div>
-      <span class="network-connector connector-one"></span>
-      <span class="network-connector connector-two"></span>
-      <span class="network-connector connector-three"></span>
-      <span class="network-connector connector-four"></span>
+      <span class="showcase-arrow arrow-kitchen"></span>
+      <span class="showcase-arrow arrow-grocery"></span>
+      <span class="showcase-arrow arrow-shelf"></span>
+      <span class="showcase-arrow arrow-ngo"></span>
     </div>
   `;
 }
 
 function renderHomeSnapshotCards(data) {
   const cards = [
-    { label: "Meals Rescued", value: formatHomeHighlight(data.stats.totalUnitsSaved), icon: "M" },
-    { label: "NGOs Connected", value: formatHomeHighlight(data.stats.totalNgos), icon: "N" },
-    { label: "Providers Onboarded", value: formatHomeHighlight(data.stats.totalProviders), icon: "P" }
+    { label: "Meals Rescued", value: formatHomeHighlight(data.stats.totalUnitsSaved), icon: "??" },
+    { label: "NGOs Connected", value: formatHomeHighlight(data.stats.totalNgos), icon: "??" },
+    { label: "Providers Onboarded", value: formatHomeHighlight(data.stats.totalProviders), icon: "??" }
   ];
 
   return `
-    <section class="home-stat-strip">
+    <section class="image-home-stat-strip">
       ${cards
         .map(
           (card) => `
-            <article class="home-stat-card panel-card">
+            <article class="image-home-stat-card panel-card">
               <div>
-                <span>${escapeHtml(card.label)}</span>
+                <span>${escapeHtml(card.label)}:</span>
                 <strong>${escapeHtml(card.value)}</strong>
               </div>
-              <span class="home-stat-icon">${escapeHtml(card.icon)}</span>
+              <span class="image-home-stat-icon">${escapeHtml(card.icon)}</span>
             </article>
           `
         )
@@ -1054,7 +1052,6 @@ function renderHomeSnapshotCards(data) {
     </section>
   `;
 }
-
 function renderHomeWorkflowCards(layout = "compact") {
   const steps = [
     {
@@ -1181,76 +1178,53 @@ function renderHomePage(data) {
       ${renderTopbar()}
       ${renderShortcutDialog()}
       ${consumeFlash()}
-      <main class="home-layout home-canvas home-reference-layout">
-        <section class="home-reference-grid">
-          <section class="home-left-board glass-panel">
-            <div class="home-hero-copy-block">
-              <p class="eyebrow">Food rescue marketplace</p>
-              <h1 class="home-reference-title">Rescuing Surplus. Feeding Communities.</h1>
-              <p class="home-reference-copy">Connecting food providers, NGOs, and consumers to reduce food waste with quick rescue alerts, transparent pickup workflows, and visible impact.</p>
-              <div class="hero-actions home-reference-actions">
+      <main class="home-layout home-canvas image-home-layout">
+        <section class="image-home-board glass-panel">
+          <div class="image-home-hero">
+            <div class="image-home-copy-block">
+              <h1 class="image-home-title">Rescuing Surplus. Feeding Communities.</h1>
+              <p class="image-home-copy">Connecting food providers, NGOs, and consumers to reduce food waste.</p>
+              <div class="hero-actions image-home-actions">
                 <button class="hero-cta hero-cta-warm" type="button" data-action="scroll-home" data-target="auth-panel" data-mode="register">Upload Surplus Food</button>
                 <button class="hero-cta hero-cta-cool" type="button" data-action="scroll-home" data-target="auth-panel" data-mode="login">Find Food</button>
               </div>
             </div>
-            <div class="home-hero-visual-wrap">
+            <div class="image-home-visual-wrap">
               ${renderHomeShowcaseVisual()}
             </div>
-            <div id="impact-strip-section">
-              ${renderHomeSnapshotCards(data)}
-            </div>
-          </section>
-          <aside class="home-right-board glass-panel">
-            <section class="home-rail-section">
-              <div class="home-rail-head">
-                <h2>How It Works</h2>
-                <p>Select the food, request the listing, and coordinate pickup in a clear rescue workflow.</p>
-              </div>
-              ${renderHomeWorkflowCards("compact")}
-            </section>
-            <section class="home-rail-section" id="demo-section">
-              <div class="home-rail-head">
-                <h2>Live Demo</h2>
-                <p>Quick access for judges, reviewers, and first-time walkthroughs.</p>
-              </div>
-              ${renderDemoAccessCards()}
-              <div class="demo-rail-actions">
-                <button class="primary-button" type="button" data-action="switch-auth" data-mode="login">Open sign-in panel</button>
-              </div>
-            </section>
-            <section class="home-rail-section">
-              <div class="home-rail-head">
-                <h2>Sustainability Impact</h2>
-                <p>Track how active listings and network participation grow across the rescue system.</p>
-              </div>
-              ${renderImpactMiniCards(data)}
-            </section>
-          </aside>
+          </div>
+          ${renderHomeSnapshotCards(data)}
         </section>
 
-        <section class="panel-card home-process-board" id="workflow-detail-section">
+        <section class="panel-card image-home-workflow-board" id="workflow-detail-section">
           <div class="section-intro center">
-            <p class="eyebrow">How the platform works</p>
-            <h2>One rescue loop for providers, NGOs, and consumers.</h2>
-            <p>Every listing follows the same path: publish, request, coordinate, and confirm pickup.</p>
+            <h2>How It Works</h2>
+            <p>Provider uploads surplus food, NGOs or consumers request it, then pickup and distribution are coordinated.</p>
           </div>
           ${renderHomeWorkflowCards("expanded")}
         </section>
 
-        <section class="home-grid home-impact-grid" id="impact-boards-section">
-          <article class="panel-card leaderboard-shell">
-            <div class="panel-head">
-              <h2>Provider Impact</h2>
-              <p>Reward good inventory discipline and completed pickups.</p>
+        <section class="image-home-secondary-grid">
+          <article class="panel-card" id="demo-section">
+            <div class="panel-head image-home-centered-head">
+              <div>
+                <h2>Live Demo</h2>
+                <p>Quick role-based access for walkthroughs and judging.</p>
+              </div>
             </div>
-            ${providerBoard}
+            ${renderDemoAccessCards()}
           </article>
-          <article class="panel-card leaderboard-shell">
-            <div class="panel-head">
-              <h2>NGO Impact</h2>
-              <p>Highlight teams turning requests into delivered food.</p>
+          <article class="panel-card" id="impact-boards-section">
+            <div class="panel-head image-home-centered-head">
+              <div>
+                <h2>Sustainability Impact</h2>
+                <p>See who is rescuing the most food and turning requests into completed deliveries.</p>
+              </div>
             </div>
-            ${ngoBoard}
+            <div class="image-home-impact-stack">
+              ${providerBoard}
+              ${ngoBoard}
+            </div>
           </article>
         </section>
 
