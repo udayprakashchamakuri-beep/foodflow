@@ -49,7 +49,7 @@ function demoToIsoOrNull(value) {
 }
 
 function demoNormalizeAudience(value) {
-  return ["ngo", "consumer", "both"].includes(value) ? value : "ngo";
+  return ["ngo", "consumer", "both"].includes(value) ? value : "both";
 }
 
 function demoNormalizeListingType(value) {

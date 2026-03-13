@@ -73,7 +73,7 @@ function toIsoOrNull(value) {
 }
 
 function normalizeAudience(value) {
-  return ["ngo", "consumer", "both"].includes(value) ? value : "ngo";
+  return ["ngo", "consumer", "both"].includes(value) ? value : "both";
 }
 
 function normalizeListingType(value) {
