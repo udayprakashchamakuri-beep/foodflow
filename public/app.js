@@ -301,11 +301,11 @@ function validateProviderItemPayload(payload) {
     throw new Error("Enter a quantity greater than 0.");
   }
 
-  const price = payload.pricePerUnit === "" ? 0 : Number(payload.pricePerUnit);
+  const priceRaw = payload.pricePerUnit;
+  const price = priceRaw === "" || priceRaw === undefined || priceRaw === null ? 0 : Number(priceRaw);
   if (!Number.isFinite(price) || price < 0) {
     throw new Error("Price per unit must be 0 or more.");
   }
-
   const expirationDate = payload.expirationDate ? new Date(payload.expirationDate) : null;
   const availableFrom = payload.availableFrom ? new Date(payload.availableFrom) : null;
   const availableUntil = payload.availableUntil ? new Date(payload.availableUntil) : null;

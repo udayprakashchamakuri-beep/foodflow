@@ -1559,7 +1559,8 @@ addRoute("POST", /^\/api\/items$/, async (req, res, db) => {
   const name = String(body.name || "").trim();
   const unit = String(body.unit || "").trim();
   const quantityAvailable = toNumber(body.quantityAvailable, null);
-  const pricePerUnit = body.pricePerUnit === "" ? 0 : toNumber(body.pricePerUnit, null);
+  const priceRaw = body.pricePerUnit;
+  const pricePerUnit = priceRaw === "" || priceRaw === undefined || priceRaw === null ? 0 : toNumber(priceRaw, null);
   const availableFrom = toIsoOrNull(body.availableFrom) || nowIso();
   const availableUntil = toIsoOrNull(body.availableUntil);
 

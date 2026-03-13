@@ -301,11 +301,11 @@ function validateProviderItemPayload(payload) {
     throw new Error("Enter a quantity greater than 0.");
   }
 
-  const price = payload.pricePerUnit === "" ? 0 : Number(payload.pricePerUnit);
+  const priceRaw = payload.pricePerUnit;
+  const price = priceRaw === "" || priceRaw === undefined || priceRaw === null ? 0 : Number(priceRaw);
   if (!Number.isFinite(price) || price < 0) {
     throw new Error("Price per unit must be 0 or more.");
   }
-
   const expirationDate = payload.expirationDate ? new Date(payload.expirationDate) : null;
   const availableFrom = payload.availableFrom ? new Date(payload.availableFrom) : null;
   const availableUntil = payload.availableUntil ? new Date(payload.availableUntil) : null;
@@ -1361,7 +1361,8 @@ async function api(path, options = {}) {
     const name = String(body.name || "").trim();
     const unit = String(body.unit || "").trim();
     const quantityAvailable = demoToNumber(body.quantityAvailable, null);
-    const pricePerUnit = body.pricePerUnit === "" ? 0 : demoToNumber(body.pricePerUnit, null);
+    const priceRaw = body.pricePerUnit;
+    const pricePerUnit = priceRaw === "" || priceRaw === undefined || priceRaw === null ? 0 : demoToNumber(priceRaw, null);
     const availableFrom = demoToIsoOrNull(body.availableFrom) || demoNowIso();
     const availableUntil = demoToIsoOrNull(body.availableUntil);
     if (!name) {
