@@ -2450,19 +2450,32 @@ function renderHomeSnapshotCards(data) {
     </section>
   `;
 }
+function renderWorkflowScene(kind) {
+  const scenes = {
+    upload: '<svg viewBox="0 0 240 120" aria-hidden="true"><rect x="28" y="58" width="184" height="38" rx="14" fill="#fff9ef" stroke="#2f4f3d" stroke-width="2"/><rect x="48" y="34" width="28" height="24" rx="8" fill="#69bf88" opacity="0.28" stroke="#2f4f3d" stroke-width="2"/><rect x="86" y="22" width="34" height="36" rx="10" fill="#ef8b3a" opacity="0.22" stroke="#2f4f3d" stroke-width="2"/><rect x="130" y="28" width="34" height="30" rx="10" fill="#69bf88" opacity="0.2" stroke="#2f4f3d" stroke-width="2"/><path d="M120 86V44" stroke="#2f4f3d" stroke-width="4" stroke-linecap="round"/><path d="M102 61l18-20 18 20" fill="none" stroke="#ef8b3a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M76 96h88" stroke="#2f4f3d" stroke-width="3" stroke-linecap="round"/></svg>',
+    request: '<svg viewBox="0 0 240 120" aria-hidden="true"><rect x="84" y="18" width="72" height="88" rx="18" fill="#fffdf8" stroke="#2f4f3d" stroke-width="2.2"/><rect x="102" y="34" width="36" height="6" rx="3" fill="#69bf88"/><rect x="98" y="48" width="44" height="6" rx="3" fill="#ef8b3a" opacity="0.78"/><rect x="98" y="62" width="44" height="6" rx="3" fill="#69bf88" opacity="0.48"/><path d="M155 44h30" stroke="#2f4f3d" stroke-width="3" stroke-linecap="round"/><path d="M176 33l18 11-18 11" fill="none" stroke="#ef8b3a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M56 88c0-14 11-25 25-25h8c14 0 25 11 25 25" fill="#eef7f1" stroke="#2f4f3d" stroke-width="2"/><circle cx="85" cy="56" r="12" fill="#f7d8b2" stroke="#2f4f3d" stroke-width="2"/></svg>',
+    pickup: '<svg viewBox="0 0 240 120" aria-hidden="true"><rect x="42" y="62" width="96" height="26" rx="10" fill="#fff9ef" stroke="#2f4f3d" stroke-width="2.2"/><path d="M138 70h28l18 14v4h-46z" fill="#ef8b3a" opacity="0.72" stroke="#2f4f3d" stroke-width="2.2"/><circle cx="76" cy="95" r="11" fill="#fff" stroke="#2f4f3d" stroke-width="3"/><circle cx="162" cy="95" r="11" fill="#fff" stroke="#2f4f3d" stroke-width="3"/><path d="M52 54h20l10-16h30" stroke="#69bf88" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M188 42c-8 0-15 5-18 12-3-7-10-12-18-12-11 0-20 9-20 20 0 22 38 34 38 34s38-12 38-34c0-11-9-20-20-20z" fill="#69bf88" opacity="0.22" stroke="#2f4f3d" stroke-width="2"/></svg>'
+  };
+
+  return scenes[kind] || '';
+}
+
 function renderHomeWorkflowCards(layout = "compact") {
   const steps = [
     {
       title: "Provider uploads surplus food",
-      description: "Providers create a quick rescue or inventory listing with expiry, quantity, and pickup details."
+      description: "Providers create a quick rescue or inventory listing with expiry, quantity, and pickup details.",
+      scene: "upload"
     },
     {
       title: "NGO or consumer requests it",
-      description: "Nearby NGOs and consumers discover the listing, open the detail page, and request what they can collect."
+      description: "Nearby NGOs and consumers discover the listing, open the detail page, and request what they can collect.",
+      scene: "request"
     },
     {
       title: "Pickup and distribution",
-      description: "Providers approve the handoff, teams coordinate pickup, and the rescue outcome appears in the impact dashboards."
+      description: "Providers approve the handoff, teams coordinate pickup, and the rescue outcome appears in the impact dashboards.",
+      scene: "pickup"
     }
   ];
 
@@ -2471,7 +2484,8 @@ function renderHomeWorkflowCards(layout = "compact") {
       ${steps
         .map(
           (step, index) => `
-            <article class="workflow-card ${escapeHtml(layout)} simple-card">
+            <article class="workflow-card ${escapeHtml(layout)} simple-card workflow-scene-card workflow-scene-${escapeHtml(step.scene)}">
+              <div class="workflow-scene" aria-hidden="true">${renderWorkflowScene(step.scene)}</div>
               <h3>${escapeHtml(step.title)}</h3>
               <p>${escapeHtml(step.description)}</p>
             </article>

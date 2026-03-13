@@ -2442,3 +2442,53 @@ h4,
 #current-demos {
   scroll-margin-top: 8rem;
 }
+
+.workflow-scene-card {
+  position: relative;
+  overflow: hidden;
+  padding-top: 1rem;
+}
+
+.workflow-scene-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.workflow-scene-upload::before {
+  background: radial-gradient(circle at 18% 22%, rgba(105, 191, 136, 0.12), transparent 28%), radial-gradient(circle at 82% 18%, rgba(239, 139, 58, 0.12), transparent 24%);
+}
+
+.workflow-scene-request::before {
+  background: radial-gradient(circle at 18% 18%, rgba(239, 139, 58, 0.11), transparent 24%), radial-gradient(circle at 82% 20%, rgba(105, 191, 136, 0.12), transparent 26%);
+}
+
+.workflow-scene-pickup::before {
+  background: radial-gradient(circle at 20% 18%, rgba(105, 191, 136, 0.12), transparent 24%), radial-gradient(circle at 82% 22%, rgba(239, 139, 58, 0.11), transparent 25%);
+}
+
+.workflow-scene {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 7.8rem;
+  margin-bottom: 0.85rem;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 249, 246, 0.82));
+  border: 1px solid rgba(211, 224, 216, 0.88);
+  display: grid;
+  place-items: center;
+}
+
+.workflow-scene svg {
+  width: min(100%, 12.8rem);
+  height: auto;
+}
+
+.workflow-card.simple-card h3,
+.workflow-card.simple-card p {
+  position: relative;
+  z-index: 1;
+}
