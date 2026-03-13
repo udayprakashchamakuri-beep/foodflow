@@ -1933,6 +1933,54 @@ async function handleGlobalKeydown(event) {
   }
 }
 
+function renderBrandEmblem(className = "") {
+  return `
+    <span class="brand-mark ${escapeHtml(className)}" aria-hidden="true">
+      <svg viewBox="0 0 120 120" role="presentation" focusable="false">
+        <defs>
+          <linearGradient id="brandGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#1fb464" />
+            <stop offset="100%" stop-color="#5cd07d" />
+          </linearGradient>
+          <linearGradient id="brandAmber" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f5b01f" />
+            <stop offset="100%" stop-color="#ef8b1f" />
+          </linearGradient>
+        </defs>
+        <circle cx="60" cy="54" r="43" fill="none" stroke="#274256" stroke-width="6" />
+        <path d="M27 79c8-20 23-38 43-49" fill="none" stroke="url(#brandGreen)" stroke-width="8" stroke-linecap="round" />
+        <path d="M91 30c8 10 12 24 11 38" fill="none" stroke="url(#brandAmber)" stroke-width="8" stroke-linecap="round" />
+        <path d="M40 18c9-7 21-9 31-7-4 11-13 20-26 22-6-4-7-8-5-15Z" fill="url(#brandGreen)" stroke="#1e854f" stroke-width="2" stroke-linejoin="round" />
+        <path d="M30 60c8 6 17 9 28 9s20-3 31-9" fill="none" stroke="#274256" stroke-width="6" stroke-linecap="round" />
+        <path d="M43 58c6-8 12-12 17-12s11 4 17 12" fill="none" stroke="url(#brandGreen)" stroke-width="6" stroke-linecap="round" />
+        <circle cx="60" cy="52" r="12" fill="#fff7eb" stroke="url(#brandAmber)" stroke-width="4" />
+        <path d="M53 52h14" stroke="#ef8b1f" stroke-width="3" stroke-linecap="round" />
+        <path d="M47 48v8M73 48v8" stroke="#ef8b1f" stroke-width="3" stroke-linecap="round" />
+        <circle cx="60" cy="90" r="16" fill="#f7faf8" stroke="#274256" stroke-width="4" />
+        <circle cx="52" cy="88" r="4" fill="#2bb561" />
+        <circle cx="60" cy="84" r="4" fill="#2bb561" />
+        <circle cx="68" cy="88" r="4" fill="#2bb561" />
+        <path d="M50 96c3-4 7-6 10-6s7 2 10 6" fill="none" stroke="#2bb561" stroke-width="4" stroke-linecap="round" />
+        <circle cx="92" cy="27" r="4" fill="#5cd07d" stroke="#2f4f3d" stroke-width="1.5" />
+        <circle cx="77" cy="49" r="4" fill="#5cd07d" stroke="#2f4f3d" stroke-width="1.5" />
+        <circle cx="44" cy="73" r="4" fill="#5cd07d" stroke="#2f4f3d" stroke-width="1.5" />
+        <circle cx="88" cy="78" r="4" fill="#5cd07d" stroke="#2f4f3d" stroke-width="1.5" />
+      </svg>
+    </span>
+  `;
+}
+
+function renderPageWatermark() {
+  return `
+    <div class="page-watermark" aria-hidden="true">
+      <div class="page-watermark-mark">${renderBrandEmblem("watermark-emblem")}</div>
+      <div class="page-watermark-wordmark">
+        <strong>FoodFlow<span>Connect</span></strong>
+        <small>Rescuing Surplus. Feeding Communities.</small>
+      </div>
+    </div>
+  `;
+}
 function renderTopbar() {
   const guestNavigation = state.me
     ? ""
@@ -1957,7 +2005,7 @@ function renderTopbar() {
   return `
     <header class="topbar glass-bar ${state.me ? "" : "topbar-home"}">
       <a class="brand" href="#/">
-        <span class="brand-mark">FF</span>
+        ${renderBrandEmblem()}
         <span>
           <strong>FoodFlow Connect</strong>
           <small>Waste less. Feed more.</small>
@@ -2022,6 +2070,7 @@ function renderShell(role, page, title, content) {
       ${renderShortcutDialog()}
       ${consumeFlash()}
       <div class="dashboard-layout dashboard-canvas">
+        ${renderPageWatermark()}
         ${renderSidebar(role, page)}
         <main class="dashboard-main">
           <section class="page-header page-header-card">
@@ -2582,6 +2631,7 @@ function renderHomePage(data) {
       ${renderShortcutDialog()}
       ${consumeFlash()}
       <main class="home-layout home-canvas image-home-layout">
+        ${renderPageWatermark()}
         <section class="image-home-board glass-panel">
           <div class="image-home-hero">
             <div class="image-home-copy-block">
