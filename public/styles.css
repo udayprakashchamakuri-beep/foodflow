@@ -1469,3 +1469,607 @@ h4,
 
 
 
+
+.topbar-home {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1rem 1.2rem;
+  border-radius: 30px;
+}
+
+.guest-nav-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.7rem;
+}
+
+.nav-link-button {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+
+.nav-link-button:hover {
+  color: var(--accent-strong);
+}
+
+.home-login-button {
+  min-width: 7rem;
+}
+
+.home-reference-layout {
+  width: min(1480px, calc(100% - 2rem));
+  display: grid;
+  gap: 1.3rem;
+  padding-bottom: 3.8rem;
+}
+
+.home-reference-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.88fr) minmax(340px, 0.98fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.home-left-board,
+.home-right-board {
+  position: relative;
+  overflow: hidden;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  background:
+    radial-gradient(circle at top left, rgba(94, 191, 135, 0.2), transparent 28%),
+    radial-gradient(circle at top right, rgba(242, 161, 79, 0.18), transparent 25%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(253, 248, 241, 0.9));
+  box-shadow: 0 26px 48px rgba(33, 41, 37, 0.1);
+}
+
+.home-left-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(310px, 0.95fr);
+  gap: 1.6rem;
+  padding: 2rem;
+}
+
+.home-left-board::before,
+.home-right-board::before,
+.home-process-board::before,
+.home-auth-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 16% 88%, rgba(250, 193, 118, 0.14), transparent 24%),
+    radial-gradient(circle at 86% 14%, rgba(113, 196, 146, 0.18), transparent 26%);
+  pointer-events: none;
+}
+
+.home-hero-copy-block,
+.home-hero-visual-wrap,
+.home-stat-strip,
+.home-rail-section,
+.home-auth-head {
+  position: relative;
+  z-index: 1;
+}
+
+.home-reference-title {
+  margin: 0;
+  max-width: 9ch;
+  font-size: clamp(3rem, 5.2vw, 5rem);
+  line-height: 0.92;
+}
+
+.home-reference-copy {
+  max-width: 32rem;
+  margin: 1rem 0 0;
+  color: rgba(49, 64, 56, 0.82);
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.home-reference-actions {
+  margin-top: 1.7rem;
+}
+
+.hero-cta {
+  border: 0;
+  border-radius: 999px;
+  padding: 1rem 1.4rem;
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 18px 34px rgba(24, 32, 28, 0.16);
+}
+
+.hero-cta-warm {
+  background: linear-gradient(135deg, #f6a348, #ee7f33);
+}
+
+.hero-cta-cool {
+  background: linear-gradient(135deg, #67c88f, #36a867);
+}
+
+.home-hero-visual-wrap {
+  display: grid;
+  align-items: center;
+}
+
+.home-network-visual {
+  position: relative;
+  min-height: 25rem;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(103, 200, 143, 0.18), transparent 28%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.62), rgba(239, 248, 242, 0.74));
+  border: 1px solid rgba(255, 255, 255, 0.72);
+}
+
+.home-network-ring {
+  position: absolute;
+  inset: 18% 24%;
+  border-radius: 999px;
+  border: 1px dashed rgba(78, 157, 112, 0.26);
+}
+
+.home-network-ring-two {
+  inset: 28% 33%;
+  border-color: rgba(238, 127, 51, 0.24);
+}
+
+.network-core-badge {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 10.5rem;
+  height: 10.5rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 0.2rem;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.94), rgba(241, 251, 245, 0.88)),
+    linear-gradient(145deg, rgba(94, 191, 135, 0.3), rgba(242, 161, 79, 0.18));
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  box-shadow: 0 24px 42px rgba(37, 50, 43, 0.16);
+}
+
+.network-core-mark,
+.network-node-icon,
+.home-stat-icon,
+.workflow-card-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(98, 195, 140, 0.22), rgba(243, 161, 78, 0.24));
+  color: var(--accent-strong);
+  font-size: 0.92rem;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.88);
+}
+
+.network-core-badge strong {
+  font-size: 1.05rem;
+}
+
+.network-core-badge small {
+  color: var(--muted);
+}
+
+.network-node {
+  position: absolute;
+  width: 9.4rem;
+  padding: 0.95rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(208, 223, 214, 0.9);
+  box-shadow: 0 18px 32px rgba(32, 44, 38, 0.08);
+  display: grid;
+  gap: 0.45rem;
+}
+
+.network-node strong {
+  font-size: 1rem;
+}
+
+.network-node small {
+  color: var(--muted);
+}
+
+.node-restaurant {
+  left: 1.2rem;
+  top: 1.2rem;
+}
+
+.node-grocery {
+  right: 1.2rem;
+  top: 1.2rem;
+}
+
+.node-banquet {
+  left: 1.5rem;
+  bottom: 1.2rem;
+}
+
+.node-ngo {
+  right: 1.2rem;
+  bottom: 1.2rem;
+}
+
+.network-connector {
+  position: absolute;
+  width: 7rem;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(239, 127, 51, 0.36), rgba(78, 157, 112, 0.44));
+  transform-origin: left center;
+}
+
+.connector-one {
+  left: 34%;
+  top: 28%;
+  transform: rotate(18deg);
+}
+
+.connector-two {
+  right: 31%;
+  top: 33%;
+  transform: rotate(-26deg);
+}
+
+.connector-three {
+  left: 34%;
+  bottom: 31%;
+  transform: rotate(-18deg);
+}
+
+.connector-four {
+  right: 32%;
+  bottom: 30%;
+  transform: rotate(24deg);
+}
+
+.home-stat-strip {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.home-stat-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  min-height: 8rem;
+}
+
+.home-stat-card span {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+
+.home-stat-card strong {
+  font-size: clamp(2rem, 3vw, 3rem);
+  line-height: 1;
+}
+
+.home-right-board {
+  display: grid;
+}
+
+.home-rail-section {
+  padding: 2rem;
+}
+
+.home-rail-section + .home-rail-section {
+  border-top: 1px solid rgba(174, 194, 182, 0.4);
+}
+
+.home-rail-head {
+  text-align: center;
+  margin-bottom: 1.2rem;
+}
+
+.home-rail-head h2,
+.section-intro h2,
+.home-auth-head h2 {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 2.8rem);
+}
+
+.home-rail-head p,
+.section-intro p,
+.home-auth-head p {
+  margin: 0.5rem auto 0;
+  max-width: 34rem;
+  color: var(--muted);
+}
+
+.workflow-compact-grid,
+.workflow-expanded-grid {
+  display: grid;
+  align-items: stretch;
+}
+
+.workflow-compact-grid {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.7rem;
+}
+
+.workflow-expanded-grid {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.workflow-card {
+  min-height: 12.5rem;
+  padding: 1.2rem;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 251, 248, 0.84));
+  border: 1px solid rgba(208, 223, 214, 0.88);
+  box-shadow: 0 18px 34px rgba(29, 40, 35, 0.06);
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.workflow-card.compact {
+  text-align: center;
+  min-height: 9.5rem;
+}
+
+.workflow-card.expanded {
+  min-height: 14rem;
+}
+
+.workflow-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.workflow-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.workflow-number {
+  color: rgba(87, 115, 101, 0.72);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.workflow-arrow {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  color: rgba(98, 132, 116, 0.82);
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.demo-card-grid,
+.impact-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.demo-card,
+.impact-mini-card {
+  padding: 1rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(213, 226, 218, 0.88);
+  box-shadow: 0 16px 28px rgba(30, 41, 36, 0.06);
+}
+
+.demo-card h3,
+.impact-mini-card strong {
+  margin: 0;
+}
+
+.demo-card p,
+.demo-card small {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--muted);
+  word-break: break-word;
+}
+
+.demo-card button {
+  width: 100%;
+  margin-top: 0.85rem;
+}
+
+.demo-rail-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.impact-mini-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.impact-mini-card span,
+.impact-mini-card small {
+  display: block;
+  color: var(--muted);
+}
+
+.impact-mini-card strong {
+  display: block;
+  margin: 0.35rem 0;
+  font-size: 2rem;
+}
+
+.impact-mini-curve {
+  height: 4.5rem;
+  margin-bottom: 0.85rem;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(246, 248, 246, 0.92), rgba(238, 246, 241, 0.78));
+}
+
+.impact-mini-curve svg {
+  width: 100%;
+  height: 100%;
+}
+
+.impact-mini-curve path {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.impact-mini-card.warm .impact-mini-curve path {
+  stroke: rgba(231, 132, 53, 0.88);
+}
+
+.impact-mini-card.cool .impact-mini-curve path {
+  stroke: rgba(72, 164, 102, 0.88);
+}
+
+.home-process-board,
+.home-auth-shell {
+  position: relative;
+  overflow: hidden;
+  margin-top: 1.2rem;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at top right, rgba(94, 191, 135, 0.14), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(242, 161, 79, 0.14), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(253, 248, 241, 0.9));
+}
+
+.section-intro.center {
+  text-align: center;
+  margin-bottom: 1.6rem;
+}
+
+.home-impact-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1.2rem;
+}
+
+.home-auth-shell {
+  margin-top: 1.2rem;
+}
+
+.home-auth-head {
+  margin-bottom: 1.2rem;
+}
+
+.home-demo-panel {
+  margin-top: 1.2rem;
+}
+
+.home-demo-panel button {
+  width: 100%;
+}
+
+@media (max-width: 1180px) {
+  .topbar-home {
+    grid-template-columns: 1fr auto;
+  }
+
+  .guest-nav-links {
+    grid-column: 1 / -1;
+    order: 3;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .home-reference-grid,
+  .home-impact-grid,
+  .home-left-board {
+    grid-template-columns: 1fr;
+  }
+
+  .home-left-board {
+    gap: 1.2rem;
+  }
+
+  .home-hero-visual-wrap {
+    order: 3;
+  }
+
+  .home-stat-strip,
+  .workflow-compact-grid,
+  .workflow-expanded-grid,
+  .demo-card-grid,
+  .impact-mini-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-arrow {
+    transform: rotate(90deg);
+    min-height: 2rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    border-radius: 24px;
+  }
+
+  .brand {
+    width: 100%;
+  }
+
+  .topbar-home {
+    grid-template-columns: 1fr;
+  }
+
+  .top-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .home-left-board,
+  .home-right-board,
+  .home-process-board,
+  .home-auth-shell {
+    padding: 1.25rem;
+  }
+
+  .home-reference-title {
+    max-width: none;
+    font-size: clamp(2.4rem, 10vw, 3.2rem);
+  }
+
+  .home-network-visual {
+    min-height: 27rem;
+  }
+
+  .network-node {
+    width: 8.1rem;
+    padding: 0.8rem;
+  }
+
+  .connector-one,
+  .connector-two,
+  .connector-three,
+  .connector-four {
+    width: 4.2rem;
+  }
+
+  .home-stat-card strong,
+  .impact-mini-card strong {
+    font-size: 1.8rem;
+  }
+}

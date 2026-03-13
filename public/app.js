@@ -550,8 +550,28 @@ async function handleGlobalKeydown(event) {
 }
 
 function renderTopbar() {
+  const guestNavigation = state.me
+    ? ""
+    : `
+        <nav class="guest-nav-links" aria-label="Home sections">
+          <button class="nav-link-button" type="button" data-action="scroll-home" data-target="impact-boards-section">Impact</button>
+          <button class="nav-link-button" type="button" data-action="scroll-home" data-target="workflow-detail-section">How It Works</button>
+          <button class="nav-link-button" type="button" data-action="scroll-home" data-target="demo-section">Demo</button>
+          <button class="nav-link-button" type="button" data-action="scroll-home" data-target="auth-panel" data-mode="register">Join Us</button>
+        </nav>
+      `;
+
+  const actions = state.me
+    ? `
+        <span class="user-chip">${escapeHtml(state.me.displayName)} | ${escapeHtml(state.me.role)}</span>
+        <button class="ghost-button" data-action="logout">Logout</button>
+      `
+    : `
+        <button class="ghost-button home-login-button" data-action="switch-auth" data-mode="login">Login</button>
+      `;
+
   return `
-    <header class="topbar glass-bar">
+    <header class="topbar glass-bar ${state.me ? "" : "topbar-home"}">
       <a class="brand" href="#/">
         <span class="brand-mark">FF</span>
         <span>
@@ -559,23 +579,13 @@ function renderTopbar() {
           <small>Waste less. Feed more.</small>
         </span>
       </a>
+      ${guestNavigation}
       <nav class="top-actions">
-        ${
-          state.me
-            ? `
-              <span class="user-chip">${escapeHtml(state.me.displayName)} | ${escapeHtml(state.me.role)}</span>
-              <button class="ghost-button" data-action="logout">Logout</button>
-            `
-            : `
-              <button class="ghost-button" data-action="switch-auth" data-mode="login">Sign in</button>
-              <button class="primary-button" data-action="switch-auth" data-mode="register">Get started</button>
-            `
-        }
+        ${actions}
       </nav>
     </header>
   `;
 }
-
 function renderSidebar(role, currentPage) {
   return `
     <aside class="sidebar glass-panel">
@@ -977,6 +987,178 @@ function renderLeaderboardInfographic(entries, options = {}) {
   `;
 }
 
+function formatHomeHighlight(value) {
+  return `${Number(value || 0).toLocaleString("en-IN")}+`;
+}
+
+function renderHomeShowcaseVisual() {
+  return `
+    <div class="home-network-visual" aria-hidden="true">
+      <div class="home-network-ring home-network-ring-one"></div>
+      <div class="home-network-ring home-network-ring-two"></div>
+      <article class="network-node node-restaurant">
+        <span class="network-node-icon">R</span>
+        <strong>Restaurants</strong>
+        <small>Same-day surplus meals</small>
+      </article>
+      <article class="network-node node-grocery">
+        <span class="network-node-icon">G</span>
+        <strong>Groceries</strong>
+        <small>Near-expiry produce</small>
+      </article>
+      <article class="network-node node-banquet">
+        <span class="network-node-icon">B</span>
+        <strong>Banquet halls</strong>
+        <small>Event rescue listings</small>
+      </article>
+      <article class="network-node node-ngo">
+        <span class="network-node-icon">N</span>
+        <strong>NGOs</strong>
+        <small>Request and distribute</small>
+      </article>
+      <div class="network-core-badge">
+        <span class="network-core-mark">FF</span>
+        <strong>FoodFlow Connect</strong>
+        <small>Coordinated rescue loop</small>
+      </div>
+      <span class="network-connector connector-one"></span>
+      <span class="network-connector connector-two"></span>
+      <span class="network-connector connector-three"></span>
+      <span class="network-connector connector-four"></span>
+    </div>
+  `;
+}
+
+function renderHomeSnapshotCards(data) {
+  const cards = [
+    { label: "Meals Rescued", value: formatHomeHighlight(data.stats.totalUnitsSaved), icon: "M" },
+    { label: "NGOs Connected", value: formatHomeHighlight(data.stats.totalNgos), icon: "N" },
+    { label: "Providers Onboarded", value: formatHomeHighlight(data.stats.totalProviders), icon: "P" }
+  ];
+
+  return `
+    <section class="home-stat-strip">
+      ${cards
+        .map(
+          (card) => `
+            <article class="home-stat-card panel-card">
+              <div>
+                <span>${escapeHtml(card.label)}</span>
+                <strong>${escapeHtml(card.value)}</strong>
+              </div>
+              <span class="home-stat-icon">${escapeHtml(card.icon)}</span>
+            </article>
+          `
+        )
+        .join("")}
+    </section>
+  `;
+}
+
+function renderHomeWorkflowCards(layout = "compact") {
+  const steps = [
+    {
+      number: "01",
+      icon: "UP",
+      title: "Provider uploads surplus food",
+      description: "Providers create a quick rescue or inventory listing with expiry, quantity, and pickup details."
+    },
+    {
+      number: "02",
+      icon: "RQ",
+      title: "NGO or consumer requests it",
+      description: "Nearby NGOs and consumers discover the listing, open the detail page, and request what they can collect."
+    },
+    {
+      number: "03",
+      icon: "PK",
+      title: "Pickup and distribution",
+      description: "Providers approve the handoff, teams coordinate pickup, and the rescue outcome appears in the impact dashboards."
+    }
+  ];
+
+  return `
+    <div class="workflow-${escapeHtml(layout)}-grid">
+      ${steps
+        .map(
+          (step, index) => `
+            <article class="workflow-card ${escapeHtml(layout)}">
+              <span class="workflow-number">${escapeHtml(step.number)}</span>
+              <span class="workflow-card-icon">${escapeHtml(step.icon)}</span>
+              <h3>${escapeHtml(step.title)}</h3>
+              <p>${escapeHtml(step.description)}</p>
+            </article>
+            ${index < steps.length - 1 ? `<span class="workflow-arrow" aria-hidden="true">&#8594;</span>` : ""}
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderDemoAccessCards() {
+  const cards = [
+    { key: "provider_restaurant", label: "Provider", account: DEMO_ACCOUNTS.provider_restaurant },
+    { key: "ngo", label: "NGO", account: DEMO_ACCOUNTS.ngo },
+    { key: "consumer", label: "Consumer", account: DEMO_ACCOUNTS.consumer }
+  ];
+
+  return `
+    <div class="demo-card-grid">
+      ${cards
+        .map(
+          (card) => `
+            <article class="demo-card">
+              <h3>${escapeHtml(card.label)}</h3>
+              <p>${escapeHtml(card.account.email)}</p>
+              <small>${escapeHtml(card.account.password)}</small>
+              <button class="ghost-button" type="button" data-action="demo-login" data-role="${escapeHtml(card.key)}">Open demo</button>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderImpactMiniCards(data) {
+  const cards = [
+    {
+      title: "Active rescue listings",
+      value: String(data.stats.activeListings),
+      note: "Live listings across providers",
+      tone: "warm"
+    },
+    {
+      title: "Network coverage",
+      value: formatHomeHighlight(data.stats.totalProviders + data.stats.totalNgos),
+      note: "Providers and NGOs onboarded",
+      tone: "cool"
+    }
+  ];
+
+  return `
+    <div class="impact-mini-grid">
+      ${cards
+        .map(
+          (card) => `
+            <article class="impact-mini-card ${escapeHtml(card.tone)}">
+              <div class="impact-mini-curve" aria-hidden="true">
+                <svg viewBox="0 0 220 82" preserveAspectRatio="none">
+                  <path d="M0 61 C22 55 31 26 50 36 C72 48 92 14 116 29 C142 47 162 18 187 32 C201 39 212 22 220 17" />
+                </svg>
+              </div>
+              <span>${escapeHtml(card.title)}</span>
+              <strong>${escapeHtml(card.value)}</strong>
+              <small>${escapeHtml(card.note)}</small>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderHomePage(data) {
   const providerBoard = renderLeaderboardInfographic(data.providerLeaderboard, {
     tone: "provider",
@@ -995,134 +1177,168 @@ function renderHomePage(data) {
   });
 
   return `
-    <div class="app-shell">
+    <div class="app-shell app-shell-home">
       ${renderTopbar()}
       ${renderShortcutDialog()}
       ${consumeFlash()}
-      <main class="home-layout home-canvas">
-        <section class="hero-card hero-stage">
-          <div>
-            <p class="eyebrow">Food rescue marketplace</p>
-            <h1>Connect restaurants, grocery stores, banquet halls, NGOs, and local consumers.</h1>
-            <p class="hero-copy">Track expiring inventory, coordinate donations, reserve surplus food, and turn food management into a visible impact loop.</p>
-            <div class="hero-actions">
-              <button class="primary-button" data-action="switch-auth" data-mode="register">Create an account</button>
-              <button class="ghost-button" data-action="switch-auth" data-mode="login">Use demo sign in</button>
+      <main class="home-layout home-canvas home-reference-layout">
+        <section class="home-reference-grid">
+          <section class="home-left-board glass-panel">
+            <div class="home-hero-copy-block">
+              <p class="eyebrow">Food rescue marketplace</p>
+              <h1 class="home-reference-title">Rescuing Surplus. Feeding Communities.</h1>
+              <p class="home-reference-copy">Connecting food providers, NGOs, and consumers to reduce food waste with quick rescue alerts, transparent pickup workflows, and visible impact.</p>
+              <div class="hero-actions home-reference-actions">
+                <button class="hero-cta hero-cta-warm" type="button" data-action="scroll-home" data-target="auth-panel" data-mode="register">Upload Surplus Food</button>
+                <button class="hero-cta hero-cta-cool" type="button" data-action="scroll-home" data-target="auth-panel" data-mode="login">Find Food</button>
+              </div>
             </div>
-          </div>
-          <div class="stats-panel sculpt-panel">
-            <div>
-              <span>Active listings</span>
-              <strong>${escapeHtml(String(data.stats.activeListings))}</strong>
+            <div class="home-hero-visual-wrap">
+              ${renderHomeShowcaseVisual()}
             </div>
-            <div>
-              <span>Providers</span>
-              <strong>${escapeHtml(String(data.stats.totalProviders))}</strong>
+            <div id="impact-strip-section">
+              ${renderHomeSnapshotCards(data)}
             </div>
-            <div>
-              <span>NGOs</span>
-              <strong>${escapeHtml(String(data.stats.totalNgos))}</strong>
-            </div>
-            <div>
-              <span>Units saved</span>
-              <strong>${escapeHtml(String(data.stats.totalUnitsSaved))}</strong>
-            </div>
-          </div>
+          </section>
+          <aside class="home-right-board glass-panel">
+            <section class="home-rail-section">
+              <div class="home-rail-head">
+                <h2>How It Works</h2>
+                <p>Select the food, request the listing, and coordinate pickup in a clear rescue workflow.</p>
+              </div>
+              ${renderHomeWorkflowCards("compact")}
+            </section>
+            <section class="home-rail-section" id="demo-section">
+              <div class="home-rail-head">
+                <h2>Live Demo</h2>
+                <p>Quick access for judges, reviewers, and first-time walkthroughs.</p>
+              </div>
+              ${renderDemoAccessCards()}
+              <div class="demo-rail-actions">
+                <button class="primary-button" type="button" data-action="switch-auth" data-mode="login">Open sign-in panel</button>
+              </div>
+            </section>
+            <section class="home-rail-section">
+              <div class="home-rail-head">
+                <h2>Sustainability Impact</h2>
+                <p>Track how active listings and network participation grow across the rescue system.</p>
+              </div>
+              ${renderImpactMiniCards(data)}
+            </section>
+          </aside>
         </section>
-        <section class="home-grid">
+
+        <section class="panel-card home-process-board" id="workflow-detail-section">
+          <div class="section-intro center">
+            <p class="eyebrow">How the platform works</p>
+            <h2>One rescue loop for providers, NGOs, and consumers.</h2>
+            <p>Every listing follows the same path: publish, request, coordinate, and confirm pickup.</p>
+          </div>
+          ${renderHomeWorkflowCards("expanded")}
+        </section>
+
+        <section class="home-grid home-impact-grid" id="impact-boards-section">
           <article class="panel-card leaderboard-shell">
             <div class="panel-head">
-              <h2>Provider leaderboard</h2>
+              <h2>Provider Impact</h2>
               <p>Reward good inventory discipline and completed pickups.</p>
             </div>
             ${providerBoard}
           </article>
           <article class="panel-card leaderboard-shell">
             <div class="panel-head">
-              <h2>NGO leaderboard</h2>
-              <p>Highlight teams turning requests into actual deliveries.</p>
+              <h2>NGO Impact</h2>
+              <p>Highlight teams turning requests into delivered food.</p>
             </div>
             ${ngoBoard}
           </article>
-          <article class="panel-card auth-panel full-span" id="auth-panel">
-            <div class="auth-switches">
-              <button class="${state.authMode === "register" ? "primary-button" : "ghost-button"}" data-action="switch-auth" data-mode="register">Register</button>
-              <button class="${state.authMode === "login" ? "primary-button" : "ghost-button"}" data-action="switch-auth" data-mode="login">Sign in</button>
+        </section>
+
+        <section class="panel-card auth-panel home-auth-shell full-span" id="auth-panel">
+          <div class="home-auth-head">
+            <div>
+              <p class="eyebrow">Join the network</p>
+              <h2>Register or sign in with the role that fits your workflow.</h2>
+              <p>Providers manage surplus inventory, NGOs coordinate rescue pickups, and consumers reserve near-expiry food responsibly.</p>
             </div>
-            <div class="auth-grid ${state.authMode === "login" ? "login-active" : "register-active"}">
-              <form class="auth-form" data-form="register">
-                <h3>Role-based onboarding</h3>
+          </div>
+          <div class="auth-switches">
+            <button class="${state.authMode === "register" ? "primary-button" : "ghost-button"}" data-action="switch-auth" data-mode="register">Register</button>
+            <button class="${state.authMode === "login" ? "primary-button" : "ghost-button"}" data-action="switch-auth" data-mode="login">Sign in</button>
+          </div>
+          <div class="auth-grid ${state.authMode === "login" ? "login-active" : "register-active"}">
+            <form class="auth-form" data-form="register">
+              <h3>Role-based onboarding</h3>
+              <label>
+                <span>Role</span>
+                <select name="role" id="register-role">
+                  <option value="provider">Food Provider</option>
+                  <option value="ngo">NGO</option>
+                  <option value="consumer">Consumer</option>
+                </select>
+              </label>
+              <label>
+                <span>Display name</span>
+                <input name="displayName" placeholder="Business or organization name" required />
+              </label>
+              <label>
+                <span>Contact name</span>
+                <input name="contactName" placeholder="Main point of contact" />
+              </label>
+              <div class="two-column">
                 <label>
-                  <span>Role</span>
-                  <select name="role" id="register-role">
-                    <option value="provider">Food Provider</option>
-                    <option value="ngo">NGO</option>
-                    <option value="consumer">Consumer</option>
+                  <span>Email</span>
+                  <input name="email" type="email" required />
+                </label>
+                <label>
+                  <span>Password</span>
+                  <input name="password" type="password" minlength="8" required />
+                </label>
+              </div>
+              <div class="two-column">
+                <label>
+                  <span>Phone</span>
+                  <input name="phone" required />
+                </label>
+                <label class="provider-only">
+                  <span>Business type</span>
+                  <select name="businessType">
+                    <option value="restaurant">Restaurant</option>
+                    <option value="grocery">Grocery</option>
+                    <option value="banquet">Banquet hall</option>
                   </select>
                 </label>
+              </div>
+              <label>
+                <span>Address</span>
+                <input name="address" required />
+              </label>
+              ${renderCertificateUploadFields()}
+              <button class="primary-button" type="submit">Create account</button>
+            </form>
+            <div class="signin-column">
+              <form class="auth-form" data-form="login">
+                <h3>Sign in</h3>
                 <label>
-                  <span>Display name</span>
-                  <input name="displayName" placeholder="Business or organization name" required />
+                  <span>Email</span>
+                  <input name="email" type="email" required />
                 </label>
                 <label>
-                  <span>Contact name</span>
-                  <input name="contactName" placeholder="Main point of contact" />
+                  <span>Password</span>
+                  <input name="password" type="password" required />
                 </label>
-                <div class="two-column">
-                  <label>
-                    <span>Email</span>
-                    <input name="email" type="email" required />
-                  </label>
-                  <label>
-                    <span>Password</span>
-                    <input name="password" type="password" minlength="8" required />
-                  </label>
-                </div>
-                <div class="two-column">
-                  <label>
-                    <span>Phone</span>
-                    <input name="phone" required />
-                  </label>
-                  <label class="provider-only">
-                    <span>Business type</span>
-                    <select name="businessType">
-                      <option value="restaurant">Restaurant</option>
-                      <option value="grocery">Grocery</option>
-                      <option value="banquet">Banquet hall</option>
-                    </select>
-                  </label>
-                </div>
-                <label>
-                  <span>Address</span>
-                  <input name="address" required />
-                </label>
-                ${renderCertificateUploadFields()}
-                <button class="primary-button" type="submit">Create account</button>
+                <button class="primary-button" type="submit">Sign in</button>
               </form>
-              <div class="signin-column">
-                <form class="auth-form" data-form="login">
-                  <h3>Sign in</h3>
-                  <label>
-                    <span>Email</span>
-                    <input name="email" type="email" required />
-                  </label>
-                  <label>
-                    <span>Password</span>
-                    <input name="password" type="password" required />
-                  </label>
-                  <button class="primary-button" type="submit">Sign in</button>
-                </form>
-                <div class="demo-panel">
-                  <h4>Demo access</h4>
-                  <button class="ghost-button" data-action="demo-login" data-role="provider_restaurant">Restaurant provider demo</button>
-                  <button class="ghost-button" data-action="demo-login" data-role="provider_grocery">Grocery provider demo</button>
-                  <button class="ghost-button" data-action="demo-login" data-role="provider_banquet">Banquet provider demo</button>
-                  <button class="ghost-button" data-action="demo-login" data-role="ngo">NGO demo</button>
-                  <button class="ghost-button" data-action="demo-login" data-role="consumer">Consumer demo</button>
-                </div>
+              <div class="demo-panel home-demo-panel">
+                <h4>Additional demo access</h4>
+                <button class="ghost-button" data-action="demo-login" data-role="provider_restaurant">Restaurant provider demo</button>
+                <button class="ghost-button" data-action="demo-login" data-role="provider_grocery">Grocery provider demo</button>
+                <button class="ghost-button" data-action="demo-login" data-role="provider_banquet">Banquet provider demo</button>
+                <button class="ghost-button" data-action="demo-login" data-role="ngo">NGO demo</button>
+                <button class="ghost-button" data-action="demo-login" data-role="consumer">Consumer demo</button>
               </div>
             </div>
-          </article>
+          </div>
         </section>
       </main>
     </div>
@@ -1667,6 +1883,27 @@ async function handleClick(event) {
   const action = target.dataset.action;
 
   try {
+    if (action === "scroll-home") {
+      const mode = target.dataset.mode;
+      if (mode && !state.me && state.authMode !== mode) {
+        state.authMode = mode;
+        await renderRoute();
+      }
+
+      const destination = document.getElementById(target.dataset.target || "");
+      if (destination instanceof HTMLElement) {
+        destination.scrollIntoView({
+          behavior: motion.reduced ? "auto" : "smooth",
+          block: "start"
+        });
+        if (destination.id === "auth-panel") {
+          window.setTimeout(() => {
+            focusAuthField(mode || state.authMode);
+          }, motion.reduced ? 0 : 220);
+        }
+      }
+      return;
+    }
     if (action === "toggle-shortcuts") {
       state.shortcutsOpen = !state.shortcutsOpen;
       await renderRoute();
