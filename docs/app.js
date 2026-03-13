@@ -2461,7 +2461,7 @@ function renderHomeShowcaseVisual() {
         <small>Distribution network</small>
       </article>
       <div class="showcase-cloud-core">
-        <span class="showcase-cloud-mark">FF</span>
+        <div class="showcase-cloud-logo">${renderBrandEmblem("hero-center-emblem")}</div>
         <strong>FoodFlow</strong>
         <small>Connect</small>
       </div>
