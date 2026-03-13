@@ -262,6 +262,67 @@ function setFlash(message, tone = "success") {
   state.flash = { message, tone };
 }
 
+function clearFormFeedback(form) {
+  form?.querySelector("[data-form-feedback]")?.remove();
+}
+
+function showFormFeedback(form, message) {
+  if (!form) {
+    return;
+  }
+
+  clearFormFeedback(form);
+  const feedback = document.createElement("div");
+  feedback.className = "inline-form-feedback inline-form-feedback-error";
+  feedback.dataset.formFeedback = "true";
+  feedback.setAttribute("role", "alert");
+  feedback.textContent = message;
+  const actions = form.querySelector(".card-actions");
+  if (actions) {
+    actions.before(feedback);
+  } else {
+    form.append(feedback);
+  }
+}
+
+function validateProviderItemPayload(payload) {
+  const name = String(payload.name || "").trim();
+  if (!name) {
+    throw new Error("Enter an item name.");
+  }
+
+  const unit = String(payload.unit || "").trim();
+  if (!unit) {
+    throw new Error("Choose a unit for this listing.");
+  }
+
+  const quantity = Number(payload.quantityAvailable);
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    throw new Error("Enter a quantity greater than 0.");
+  }
+
+  const price = payload.pricePerUnit === "" ? 0 : Number(payload.pricePerUnit);
+  if (!Number.isFinite(price) || price < 0) {
+    throw new Error("Price per unit must be 0 or more.");
+  }
+
+  const expirationDate = payload.expirationDate ? new Date(payload.expirationDate) : null;
+  const availableFrom = payload.availableFrom ? new Date(payload.availableFrom) : null;
+  const availableUntil = payload.availableUntil ? new Date(payload.availableUntil) : null;
+  if (expirationDate && Number.isNaN(expirationDate.getTime())) {
+    throw new Error("Choose a valid expiration date.");
+  }
+  if (availableFrom && Number.isNaN(availableFrom.getTime())) {
+    throw new Error("Choose a valid available-from date.");
+  }
+  if (availableUntil && Number.isNaN(availableUntil.getTime())) {
+    throw new Error("Choose a valid available-until date.");
+  }
+  if (availableFrom && availableUntil && availableUntil.getTime() < availableFrom.getTime()) {
+    throw new Error("Available until must be later than available from.");
+  }
+}
+
 function consumeFlash() {
   if (!state.flash) {
     return "";
@@ -1871,6 +1932,7 @@ async function handleSubmit(event) {
     }
 
     if (form.dataset.form === "provider-item") {
+      clearFormFeedback(form);
       const payload = {
         ...data,
         isPacked: formData.get("isPacked") === "on"
@@ -1878,6 +1940,7 @@ async function handleSubmit(event) {
       delete payload.imageFile;
       delete payload.barcodeImageFile;
       Object.assign(payload, await resolveProviderImagePayload(form, formData));
+      validateProviderItemPayload(payload);
 
       const itemId = data.itemId;
       if (itemId) {
@@ -1888,7 +1951,12 @@ async function handleSubmit(event) {
         setFlash("Listing published.");
       }
       const current = parseRoute();
-      location.hash = buildHash("provider", current.page, current.page === "inventory" ? { search: current.params.get("search") || "" } : {});
+      const nextHash = buildHash("provider", current.page, current.page === "inventory" ? { search: current.params.get("search") || "" } : {});
+      if (location.hash === nextHash) {
+        await renderRoute();
+      } else {
+        location.hash = nextHash;
+      }
       return;
     }
 
@@ -1926,6 +1994,10 @@ async function handleSubmit(event) {
       location.hash = buildHash("consumer", "orders");
     }
   } catch (error) {
+    if (form.dataset.form === "provider-item") {
+      showFormFeedback(form, error.message);
+      return;
+    }
     setFlash(error.message, "error");
     await renderRoute();
   }
@@ -2054,13 +2126,23 @@ async function bootstrap() {
     await renderRoute();
   });
   document.addEventListener("change", (event) => {
-  if (event.target && event.target.id === "register-role") {
-    syncRoleFieldVisibility();
-  }
-  if (event.target && event.target.matches('select[name="category"][data-unit-source]')) {
-    syncUnitOptionsForCategory(event.target);
-  }
-});
+    const form = event.target?.closest?.('form[data-form="provider-item"]');
+    if (form) {
+      clearFormFeedback(form);
+    }
+    if (event.target && event.target.id === "register-role") {
+      syncRoleFieldVisibility();
+    }
+    if (event.target && event.target.matches('select[name="category"][data-unit-source]')) {
+      syncUnitOptionsForCategory(event.target);
+    }
+  });
+  document.addEventListener("input", (event) => {
+    const form = event.target?.closest?.('form[data-form="provider-item"]');
+    if (form) {
+      clearFormFeedback(form);
+    }
+  });
 
   try {
     await refreshSession();

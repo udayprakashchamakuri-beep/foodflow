@@ -1556,27 +1556,46 @@ addRoute("POST", /^\/api\/items$/, async (req, res, db) => {
   }
 
   const body = await readJsonBody(req);
-  if (!body.name || !body.unit || !toNumber(body.quantityAvailable, null)) {
-    return sendError(res, 400, "Item name, quantity, and unit are required.");
+  const name = String(body.name || "").trim();
+  const unit = String(body.unit || "").trim();
+  const quantityAvailable = toNumber(body.quantityAvailable, null);
+  const pricePerUnit = body.pricePerUnit === "" ? 0 : toNumber(body.pricePerUnit, null);
+  const availableFrom = toIsoOrNull(body.availableFrom) || nowIso();
+  const availableUntil = toIsoOrNull(body.availableUntil);
+
+  if (!name) {
+    return sendError(res, 400, "Enter an item name.");
+  }
+  if (!unit) {
+    return sendError(res, 400, "Choose a unit for this listing.");
+  }
+  if (!quantityAvailable || quantityAvailable <= 0) {
+    return sendError(res, 400, "Enter a quantity greater than 0.");
+  }
+  if (pricePerUnit === null || pricePerUnit < 0) {
+    return sendError(res, 400, "Price per unit must be 0 or more.");
+  }
+  if (availableUntil && availableFrom && new Date(availableUntil).getTime() < new Date(availableFrom).getTime()) {
+    return sendError(res, 400, "Available until must be later than available from.");
   }
 
   const itemId = insertItem(db, {
     providerId: user.id,
-    name: String(body.name).trim(),
+    name,
     description: String(body.description || "").trim(),
     category: normalizeCategory(body.category),
-    quantityAvailable: toNumber(body.quantityAvailable, 0),
-    unit: String(body.unit).trim(),
+    quantityAvailable,
+    unit,
     expirationDate: toIsoOrNull(body.expirationDate),
     isPacked: Boolean(body.isPacked),
     locationText: String(body.locationText || user.address || "").trim(),
     latitude: toNumber(body.latitude, user.latitude),
     longitude: toNumber(body.longitude, user.longitude),
-    availableFrom: toIsoOrNull(body.availableFrom) || nowIso(),
-    availableUntil: toIsoOrNull(body.availableUntil),
+    availableFrom,
+    availableUntil,
     listingType: normalizeListingType(body.listingType),
     audience: normalizeAudience(body.audience),
-    pricePerUnit: toNumber(body.pricePerUnit, 0),
+    pricePerUnit,
     status: normalizeItemStatus(body.status),
     donorNotes: String(body.donorNotes || "").trim(),
     imageUrl: String(body.imageUrl || "").trim(),

@@ -1035,27 +1035,45 @@ async function api(path, options = {}) {
 
   if (url.pathname === "/api/items" && method === "POST") {
     const user = requireDemoUser(store, ["provider"]);
-    if (!body.name || !body.unit || !demoToNumber(body.quantityAvailable, null)) {
-      throw new Error("Item name, quantity, and unit are required.");
+    const name = String(body.name || "").trim();
+    const unit = String(body.unit || "").trim();
+    const quantityAvailable = demoToNumber(body.quantityAvailable, null);
+    const pricePerUnit = body.pricePerUnit === "" ? 0 : demoToNumber(body.pricePerUnit, null);
+    const availableFrom = demoToIsoOrNull(body.availableFrom) || demoNowIso();
+    const availableUntil = demoToIsoOrNull(body.availableUntil);
+    if (!name) {
+      throw new Error("Enter an item name.");
+    }
+    if (!unit) {
+      throw new Error("Choose a unit for this listing.");
+    }
+    if (!quantityAvailable || quantityAvailable <= 0) {
+      throw new Error("Enter a quantity greater than 0.");
+    }
+    if (pricePerUnit === null || pricePerUnit < 0) {
+      throw new Error("Price per unit must be 0 or more.");
+    }
+    if (availableUntil && availableFrom && new Date(availableUntil).getTime() < new Date(availableFrom).getTime()) {
+      throw new Error("Available until must be later than available from.");
     }
     const item = {
       id: nextDemoId(store, "items"),
       providerId: user.id,
-      name: String(body.name).trim(),
+      name,
       description: String(body.description || "").trim(),
       category: demoNormalizeCategory(body.category),
-      quantityAvailable: demoToNumber(body.quantityAvailable, 0),
-      unit: String(body.unit).trim(),
+      quantityAvailable,
+      unit,
       expirationDate: demoToIsoOrNull(body.expirationDate),
       isPacked: Boolean(body.isPacked),
       locationText: String(body.locationText || user.address || "").trim(),
       latitude: demoToNumber(body.latitude, user.latitude),
       longitude: demoToNumber(body.longitude, user.longitude),
-      availableFrom: demoToIsoOrNull(body.availableFrom) || demoNowIso(),
-      availableUntil: demoToIsoOrNull(body.availableUntil),
+      availableFrom,
+      availableUntil,
       listingType: demoNormalizeListingType(body.listingType),
       audience: demoNormalizeAudience(body.audience),
-      pricePerUnit: demoToNumber(body.pricePerUnit, 0),
+      pricePerUnit,
       status: demoNormalizeStatus(body.status),
       donorNotes: String(body.donorNotes || "").trim(),
       imageUrl: String(body.imageUrl || "").trim(),
