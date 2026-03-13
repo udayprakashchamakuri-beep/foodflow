@@ -2614,3 +2614,11 @@ h4,
 .showcase-cloud-logo .brand-mark svg {
   filter: none;
 }
+
+.provider-detail-layout {
+  align-items: start;
+}
+
+.provider-detail-panel {
+  gap: 1.2rem;
+}

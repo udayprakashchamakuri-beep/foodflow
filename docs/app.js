@@ -2236,7 +2236,7 @@ function renderItemTile(item, mode, params = null) {
   const detailParams = params ? { ...params, item: item.id } : { item: item.id };
   const detailAction =
     mode === "provider"
-      ? `href="${buildHash("provider", "inventory", { edit: item.id })}"`
+      ? `href="${buildHash("provider", "detail", { ...detailParams, from: detailParams.from || "inventory" })}"`
       : mode === "ngo"
         ? `href="${buildHash("ngo", "detail", detailParams)}"`
         : mode === "consumer"
@@ -2812,7 +2812,7 @@ function renderProviderInventory(items, editItem, route) {
           <button class="ghost-button" type="submit">Apply</button>
         </form>
         <div class="stack-list">
-          ${items.length ? items.map((item) => renderItemTile(item, "provider")).join("") : renderEmptyCard("No items yet", "Create your first listing to start coordinating pickups.")}
+          ${items.length ? items.map((item) => renderItemTile(item, "provider", { from: route.page, search })).join("") : renderEmptyCard("No items yet", "Create your first listing to start coordinating pickups.")}
         </div>
       </article>
     </section>
@@ -2851,13 +2851,37 @@ async function renderProviderPage(route) {
     return renderShell("provider", "inventory", "Inventory management", renderProviderInventory(response.items, editItem, route));
   }
 
+  if (route.page === "detail") {
+    const itemId = route.params.get("item");
+    if (!itemId) {
+      return renderShell("provider", "inventory", "Listing detail", renderEmptyCard("Select a listing", "Open any item from Inventory or Quick rescue to view the full listing details."));
+    }
+
+    const response = await api(`/api/items/${itemId}`);
+    const item = response.item;
+    const fromPage = ["inventory", "availability", "trash"].includes(route.params.get("from")) ? route.params.get("from") : "inventory";
+    const backParams = Object.fromEntries(route.params.entries());
+    delete backParams.item;
+    const inventoryEditParams = { edit: item.id };
+    if (route.params.get("search")) {
+      inventoryEditParams.search = route.params.get("search");
+    }
+
+    return renderShell(
+      "provider",
+      fromPage,
+      "Listing detail",
+      `<section class="content-grid two-pane provider-detail-layout"><article class="panel-card detail-panel provider-detail-panel">${renderMediaGallery(item)}<div class="panel-head"><div><p class="eyebrow">Your listing</p><h2>${escapeHtml(item.name)}</h2></div>${badge(item.status)}</div><p>${escapeHtml(item.description || "No description yet.")}</p><div class="meta-row"><span>${escapeHtml(item.category)}</span><span>${item.isPacked ? "Packed" : "Unpacked"}</span><span>${formatQty(item.quantityAvailable, item.unit)}</span><span>${formatDate(item.expirationDate)}</span></div><div class="meta-row"><span>${formatMoney(item.pricePerUnit)}</span><span>${escapeHtml(item.listingType || "donation")}</span><span>${escapeHtml(item.audience || "ngo")}</span><span>${escapeHtml(item.locationText || state.me.address || "Location pending")}</span></div><p class="muted">Donor notes: ${escapeHtml(item.donorNotes || "No donor note")}</p><div class="card-actions"><a class="ghost-button" href="${buildHash("provider", fromPage, backParams)}">Back</a><a class="primary-button" href="${buildHash("provider", "inventory", inventoryEditParams)}">Edit listing</a></div></article><article class="panel-card"><div class="panel-head"><h2>Provider actions</h2><p>Review the listing details first, then update fields or change status from inventory management.</p></div><div class="stack-list"><article class="empty-card atmospheric-card"><h3>Visibility</h3><p>This listing is visible to ${escapeHtml(item.audience || "ngo")} according to the configured audience and listing type.</p></article><article class="empty-card atmospheric-card"><h3>Availability window</h3><p>Available from ${formatDate(item.availableFrom)} until ${formatDate(item.availableUntil)}.</p></article><article class="empty-card atmospheric-card"><h3>Contact details</h3><p>${escapeHtml(state.me.contactName || state.me.displayName || "Provider contact")}</p><p>${escapeHtml(state.me.phone || "Phone pending")}</p><p>${escapeHtml(state.me.address || item.locationText || "Address pending")}</p></article></div></article></section>`
+    );
+  }
+
   if (route.page === "availability") {
     const response = await api("/api/items?scope=mine");
     return renderShell(
       "provider",
       "availability",
       "Availability controls",
-      `<section class="panel-card"><div class="panel-head"><h2>Listing status</h2><p>Pause low-confidence inventory or re-open archived listings.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "provider")).join("") : renderEmptyCard("No listings", "Add inventory before setting availability.")}</div></section>`
+      `<section class="panel-card"><div class="panel-head"><h2>Listing status</h2><p>Pause low-confidence inventory or re-open archived listings.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "provider", { from: route.page, search })).join("") : renderEmptyCard("No listings", "Add inventory before setting availability.")}</div></section>`
     );
   }
 
@@ -2880,7 +2904,7 @@ async function renderProviderPage(route) {
     "trash",
     "Quick rescue section",
     `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Quick rescue listing</h2><p>${escapeHtml(note)}</p></div><form class="stack-form" data-form="provider-item"><input type="hidden" name="source" value="quick_rescue" /><label><span>Item name</span><input name="name" required placeholder="Event surplus or near-expiry item" /></label><div class="three-column"><label><span>Category</span><select name="category" data-unit-source>${renderOptionList(CATEGORY_OPTIONS, "Prepared Food")}</select></label><label><span>Quantity</span><input name="quantityAvailable" type="number" min="1" value="10" /></label><label><span>Unit</span><select name="unit" data-unit-target>${renderUnitOptions("Prepared Food", "packs")}</select></label></div><div class="three-column"><label><span>Listing type</span><select name="listingType"><option value="donation">Donation</option><option value="free_public">Free public</option></select></label><label><span>Audience</span><select name="audience"><option value="ngo">NGO</option><option value="both">Both</option><option value="consumer">Consumer</option></select></label><label class="checkbox-label"><input name="isPacked" type="checkbox" checked /><span>Packed item</span></label></div><label><span>Location</span><input name="locationText" value="${escapeHtml(state.me.address || "")}" /></label>
-          ${renderProviderImageFields()}<label><span>Available until</span><div class="date-input"><input name="availableUntil" type="datetime-local" /><button type="button" class="calendar-trigger" data-action="open-picker" aria-label="Open calendar"></button></div></label><label><span>Donor notes</span><textarea name="donorNotes" rows="3" placeholder="Access instructions or urgency"></textarea></label><button class="primary-button" type="submit">Publish rescue listing</button></form></article><article class="panel-card"><div class="panel-head"><h2>Donation activity</h2><p>Nearby rescue responses and pickup coordination for your quick rescue listings.</p></div><div class="stack-list">${requestsResponse.requests.length ? requestsResponse.requests.map((request) => renderRequestCard(request, "provider")).join("") : renderEmptyCard("No donation requests", "Once NGOs start claiming items, threads will appear here.")}</div><div class="panel-head compact"><h3>Current donation-capable inventory</h3></div><div class="stack-list">${itemsResponse.items.filter((item) => item.listingType !== "sale" || item.audience !== "consumer").map((item) => renderItemTile(item, "provider")).join("") || renderEmptyCard("No rescue listings", "Add a donation or free-public listing to reduce waste.")}</div></article></section>`
+          ${renderProviderImageFields()}<label><span>Available until</span><div class="date-input"><input name="availableUntil" type="datetime-local" /><button type="button" class="calendar-trigger" data-action="open-picker" aria-label="Open calendar"></button></div></label><label><span>Donor notes</span><textarea name="donorNotes" rows="3" placeholder="Access instructions or urgency"></textarea></label><button class="primary-button" type="submit">Publish rescue listing</button></form></article><article class="panel-card"><div class="panel-head"><h2>Donation activity</h2><p>Nearby rescue responses and pickup coordination for your quick rescue listings.</p></div><div class="stack-list">${requestsResponse.requests.length ? requestsResponse.requests.map((request) => renderRequestCard(request, "provider")).join("") : renderEmptyCard("No donation requests", "Once NGOs start claiming items, threads will appear here.")}</div><div class="panel-head compact"><h3>Current donation-capable inventory</h3></div><div class="stack-list">${itemsResponse.items.filter((item) => item.listingType !== "sale" || item.audience !== "consumer").map((item) => renderItemTile(item, "provider", { from: route.page, search })).join("") || renderEmptyCard("No rescue listings", "Add a donation or free-public listing to reduce waste.")}</div></article></section>`
   );
 }
 

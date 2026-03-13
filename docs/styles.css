@@ -2615,6 +2615,14 @@ h4,
   filter: none;
 }
 
+.provider-detail-layout {
+  align-items: start;
+}
+
+.provider-detail-panel {
+  gap: 1.2rem;
+}
+
 
 .pages-demo-badge {
   position: fixed;
