@@ -2672,30 +2672,7 @@ h4,
   border-color: rgba(235, 106, 67, 0.35);
   box-shadow: 0 12px 24px rgba(201, 74, 36, 0.12);
 }
-
-.urgent-banner {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: #fff;
-  border: 1px solid rgba(235, 106, 67, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #c74b2a;
-  box-shadow: 0 10px 20px rgba(201, 74, 36, 0.16);
-}
-
-.urgent-banner strong {
-  font-size: 0.75rem;
-  color: #7a2417;
-}
-
+\n\n
 @keyframes urgentPulse {
   0%,
   100% {

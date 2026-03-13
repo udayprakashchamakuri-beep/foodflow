@@ -1685,7 +1685,6 @@ async function renderNgoPage(route) {
     : renderEmptyCard("No standard listings", "Try loosening your filters to see more inventory.");
   const listingMarkup = `
         <div class="urgent-callout">
-          <div class="urgent-banner"><span>Urgent pickup</span><strong>Quick rescue</strong></div>
           <div class="panel-head"><h2>Quick rescue listings</h2><p>High-urgency listings published in the quick rescue flow.</p></div>
           <div class="stack-list">${quickRescueMarkup}</div>
         </div>
@@ -1789,7 +1788,6 @@ async function renderConsumerPage(route) {
     : renderEmptyCard("No standard listings", "Try loosening your search or distance filters.");
   const listingMarkup = `
         <div class="urgent-callout">
-          <div class="urgent-banner"><span>Urgent pickup</span><strong>Quick rescue</strong></div>
           <div class="panel-head"><h2>Quick rescue listings</h2><p>High-urgency listings from quick rescue inventory.</p></div>
           <div class="stack-list">${quickRescueMarkup}</div>
         </div>
