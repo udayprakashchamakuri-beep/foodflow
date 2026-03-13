@@ -305,6 +305,14 @@ function validateProviderItemPayload(payload) {
     throw new Error("Enter a quantity greater than 0.");
   }
 
+  const pickupPoint = String(payload.pickupPoint || "shop");
+  if (pickupPoint === "custom") {
+    const pickupAddress = String(payload.pickupAddress || payload.locationText || "").trim();
+    if (!pickupAddress) {
+      throw new Error("Enter a pickup address for custom pickup.");
+    }
+  }
+
   const priceRaw = payload.pricePerUnit;
   const price = priceRaw === "" || priceRaw === undefined || priceRaw === null ? 0 : Number(priceRaw);
   if (!Number.isFinite(price) || price < 0) {
@@ -1453,6 +1461,12 @@ function renderHomePage(data) {
 }
 function renderProviderInventory(items, editItem, route) {
   const search = route.params.get("search") || "";
+  const baseAddress = String(state.me.address || "").trim();
+  const editLocation = String(editItem?.locationText || "").trim();
+  const pickupShopLocation = baseAddress || editLocation;
+  const isCustomPickup = Boolean(editLocation && (!baseAddress || editLocation !== baseAddress));
+  const pickupPointValue = isCustomPickup ? "custom" : "shop";
+  const pickupAddressValue = isCustomPickup ? editLocation : "";
   return `
     <section class="content-grid two-pane">
       <article class="panel-card">
@@ -1462,6 +1476,7 @@ function renderProviderInventory(items, editItem, route) {
         </div>
         <form class="stack-form" data-form="provider-item">
           <input type="hidden" name="itemId" value="${editItem ? editItem.id : ""}" />
+          <input type="hidden" name="locationTextDefault" value="${escapeHtml(pickupShopLocation)}" />
           <div class="two-column">
             <label><span>Item name</span><input name="name" value="${escapeHtml(editItem?.name || "")}" required /></label>
             <label><span>Category</span><select name="category" data-unit-source>${renderOptionList(CATEGORY_OPTIONS, editItem?.category || "Prepared Food")}</select></label>
@@ -1483,7 +1498,8 @@ function renderProviderInventory(items, editItem, route) {
             <label><span>Audience</span><select name="audience"><option value="both" ${!editItem || editItem.audience === "both" ? "selected" : ""}>Both</option><option value="ngo" ${editItem?.audience === "ngo" ? "selected" : ""}>NGO</option><option value="consumer" ${editItem?.audience === "consumer" ? "selected" : ""}>Consumer</option></select></label>
             <label><span>Status</span><select name="status"><option value="available" ${!editItem || editItem.status === "available" ? "selected" : ""}>Available</option><option value="draft" ${editItem?.status === "draft" ? "selected" : ""}>Draft</option><option value="archived" ${editItem?.status === "archived" ? "selected" : ""}>Archived</option></select></label>
           </div>
-          <label><span>Location</span><input name="locationText" value="${escapeHtml(editItem?.locationText || state.me.address || "")}" /></label>
+          <label><span>Pickup point</span><select name="pickupPoint" data-pickup-point><option value="shop" ${pickupPointValue === "shop" ? "selected" : ""}>At the shop</option><option value="custom" ${pickupPointValue === "custom" ? "selected" : ""}>Custom</option></select></label>
+          <label class="${pickupPointValue === "custom" ? "" : "hidden"}" data-pickup-address><span>Pickup address</span><textarea name="pickupAddress" rows="2" placeholder="Enter pickup address">${escapeHtml(pickupAddressValue)}</textarea></label>
           <label class="checkbox-label"><input name="isPacked" type="checkbox" ${(editItem?.isPacked ?? true) ? "checked" : ""} /><span>Packed item</span></label>
           <label><span>Donor notes</span><textarea name="donorNotes" rows="2">${escapeHtml(editItem?.donorNotes || "")}</textarea></label>
           <div class="card-actions">
@@ -1595,7 +1611,7 @@ async function renderProviderPage(route) {
     "provider",
     "trash",
     "Quick rescue section",
-    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Quick rescue listing</h2><p>${escapeHtml(note)}</p></div><form class="stack-form" data-form="provider-item"><input type="hidden" name="source" value="quick_rescue" /><label><span>Item name</span><input name="name" required placeholder="Event surplus or near-expiry item" /></label><div class="three-column"><label><span>Category</span><select name="category" data-unit-source>${renderOptionList(CATEGORY_OPTIONS, "Prepared Food")}</select></label><label><span>Quantity</span><input name="quantityAvailable" type="number" min="1" value="10" /></label><label><span>Unit</span><select name="unit" data-unit-target>${renderUnitOptions("Prepared Food", "packs")}</select></label></div><div class="three-column"><label><span>Listing type</span><select name="listingType"><option value="donation">Donation</option><option value="free_public">Free public</option></select></label><label><span>Audience</span><select name="audience"><option value="both" selected>Both</option><option value="ngo">NGO</option><option value="consumer">Consumer</option></select></label><label class="checkbox-label"><input name="isPacked" type="checkbox" checked /><span>Packed item</span></label></div><label><span>Location</span><input name="locationText" value="${escapeHtml(state.me.address || "")}" /></label>
+    `<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Quick rescue listing</h2><p>${escapeHtml(note)}</p></div><form class="stack-form" data-form="provider-item"><input type="hidden" name="source" value="quick_rescue" /><label><span>Item name</span><input name="name" required placeholder="Event surplus or near-expiry item" /></label><div class="three-column"><label><span>Category</span><select name="category" data-unit-source>${renderOptionList(CATEGORY_OPTIONS, "Prepared Food")}</select></label><label><span>Quantity</span><input name="quantityAvailable" type="number" min="1" value="10" /></label><label><span>Unit</span><select name="unit" data-unit-target>${renderUnitOptions("Prepared Food", "packs")}</select></label></div><div class="three-column"><label><span>Listing type</span><select name="listingType"><option value="donation">Donation</option><option value="free_public">Free public</option></select></label><label><span>Audience</span><select name="audience"><option value="both" selected>Both</option><option value="ngo">NGO</option><option value="consumer">Consumer</option></select></label><label class="checkbox-label"><input name="isPacked" type="checkbox" checked /><span>Packed item</span></label></div><input type="hidden" name="locationTextDefault" value="${escapeHtml(String(state.me.address || "").trim())}" /><label><span>Pickup point</span><select name="pickupPoint" data-pickup-point><option value="shop" selected>At the shop</option><option value="custom">Custom</option></select></label><label class="hidden" data-pickup-address><span>Pickup address</span><textarea name="pickupAddress" rows="2" placeholder="Enter pickup address"></textarea></label>
           ${renderProviderImageFields()}<label><span>Available until</span><div class="date-input"><input name="availableUntil" type="datetime-local" /><button type="button" class="calendar-trigger" data-action="open-picker" aria-label="Open calendar"></button></div></label><label><span>Donor notes</span><textarea name="donorNotes" rows="3" placeholder="Access instructions or urgency"></textarea></label><button class="primary-button" type="submit">Publish rescue listing</button></form></article><article class="panel-card"><div class="panel-head"><h2>Donation activity</h2><p>Nearby rescue responses and pickup coordination for your quick rescue listings.</p></div><div class="stack-list">${requestsResponse.requests.length ? requestsResponse.requests.map((request) => renderRequestCard(request, "provider")).join("") : renderEmptyCard("No donation requests", "Once NGOs start claiming items, threads will appear here.")}</div><div class="panel-head compact"><h3>Current donation-capable inventory</h3></div><div class="stack-list">${itemsResponse.items.filter((item) => item.listingType !== "sale" || item.audience !== "consumer").map((item) => renderItemTile(item, "provider", { from: route.page, search })).join("") || renderEmptyCard("No rescue listings", "Add a donation or free-public listing to reduce waste.")}</div></article></section>`
   );
 }
@@ -1816,6 +1832,7 @@ async function renderRoute() {
 
   syncRoleFieldVisibility();
   syncUnitOptionsForCategory();
+  syncPickupPointFields();
   hydrateVisualEnhancements();
   focusShortcutDialogIfNeeded();
 
@@ -1894,6 +1911,29 @@ function syncUnitOptionsForCategory(selectEl = null) {
     const current = unitSelect.value;
     const units = getUnitsForCategory(select.value);
     unitSelect.innerHTML = renderOptionList(units, units.includes(current) ? current : units[0] || "units");
+  });
+}
+
+function syncPickupPointFields(selectEl = null) {
+  const selects = selectEl
+    ? [selectEl]
+    : Array.from(document.querySelectorAll("select[name=\"pickupPoint\"][data-pickup-point]"));
+
+  selects.forEach((select) => {
+    const form = select.closest("form");
+    if (!form) {
+      return;
+    }
+    const addressRow = form.querySelector("[data-pickup-address]");
+    if (!addressRow) {
+      return;
+    }
+    const isCustom = select.value === "custom";
+    addressRow.classList.toggle("hidden", !isCustom);
+    const textarea = addressRow.querySelector("textarea[name=\"pickupAddress\"]");
+    if (textarea) {
+      textarea.required = isCustom;
+    }
   });
 }
 function syncRoleFieldVisibility() {
@@ -1982,10 +2022,19 @@ async function handleSubmit(event) {
         ...data,
         isPacked: formData.get("isPacked") === "on"
       };
+      const pickupPoint = String(formData.get("pickupPoint") || "shop");
+      const pickupAddress = String(formData.get("pickupAddress") || "").trim();
+      const locationTextDefault = String(formData.get("locationTextDefault") || "").trim();
+      payload.pickupPoint = pickupPoint;
+      payload.pickupAddress = pickupAddress;
+      payload.locationText = pickupPoint === "custom" ? pickupAddress : locationTextDefault;
       delete payload.imageFile;
       delete payload.barcodeImageFile;
       Object.assign(payload, await resolveProviderImagePayload(form, formData));
       validateProviderItemPayload(payload);
+      delete payload.pickupPoint;
+      delete payload.pickupAddress;
+      delete payload.locationTextDefault;
 
       const itemId = data.itemId;
       if (itemId) {
@@ -2180,6 +2229,9 @@ async function bootstrap() {
     }
     if (event.target && event.target.matches('select[name="category"][data-unit-source]')) {
       syncUnitOptionsForCategory(event.target);
+    }
+    if (event.target && event.target.matches('select[name="pickupPoint"][data-pickup-point]')) {
+      syncPickupPointFields(event.target);
     }
   });
   document.addEventListener("input", (event) => {
