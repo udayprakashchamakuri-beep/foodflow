@@ -2324,9 +2324,21 @@ function renderItemTile(item, mode, params = null) {
           : `href="${buildHash(mode, "browse", detailParams)}"`;
 
   const imageMarkup = renderCardImage(item.imageUrl || item.barcodeImageUrl, item.name);
+  const providerActions =
+    mode === "provider"
+      ? [
+          item.status !== "available"
+            ? `<button class="ghost-button" data-action="item-status" data-item-id="${item.id}" data-status="available">Make available</button>`
+            : "",
+          item.status !== "archived"
+            ? `<button class="ghost-button" data-action="item-status" data-item-id="${item.id}" data-status="archived">Archive</button>`
+            : ""
+        ]
+          .filter(Boolean)
+          .join("")
+      : "";
 
-  return `
-    <article class="list-card atmospheric-card">
+  return `    <article class="list-card atmospheric-card">
       ${imageMarkup}
       <div class="list-card-head">
         <div>
@@ -2349,14 +2361,7 @@ function renderItemTile(item, mode, params = null) {
       </div>
       <div class="card-actions">
         <a class="ghost-button" ${detailAction}>View details</a>
-        ${
-          mode === "provider"
-            ? `
-              <button class="ghost-button" data-action="item-status" data-item-id="${item.id}" data-status="available">Make available</button>
-              <button class="ghost-button" data-action="item-status" data-item-id="${item.id}" data-status="archived">Archive</button>
-            `
-            : ""
-        }
+        ${providerActions}
       </div>
     </article>
   `;
