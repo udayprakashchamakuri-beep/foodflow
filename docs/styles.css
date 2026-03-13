@@ -2588,6 +2588,24 @@ h4,
   }
 }
 
+.showcase-illustration svg {
+  width: 100%;
+  max-width: 8.6rem;
+  height: auto;
+}
+
+.showcase-tile {
+  width: 10.4rem;
+  padding: 0.6rem 0.75rem 0.8rem;
+}
+
+.tile-kitchen,
+.tile-grocery,
+.tile-shelf,
+.tile-ngo {
+  background: rgba(255, 255, 255, 0.82);
+}
+
 
 .pages-demo-badge {
   position: fixed;
