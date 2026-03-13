@@ -2635,3 +2635,75 @@ h4,
 .provider-detail-panel {
   gap: 1.2rem;
 }
+
+.urgent-callout {
+  position: relative;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(235, 106, 67, 0.35);
+  background: linear-gradient(135deg, rgba(255, 240, 235, 0.95), rgba(255, 250, 236, 0.95));
+  box-shadow: 0 24px 50px rgba(201, 74, 36, 0.18);
+  overflow: hidden;
+}
+
+.urgent-callout::before {
+  content: "";
+  position: absolute;
+  inset: -40% 35% 35% -40%;
+  background: radial-gradient(circle, rgba(238, 92, 56, 0.22), rgba(238, 92, 56, 0));
+  animation: urgentPulse 3.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.urgent-callout::after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border-radius: 16px;
+  border: 1px dashed rgba(238, 92, 56, 0.25);
+  pointer-events: none;
+}
+
+.urgent-callout .panel-head h2 {
+  color: #8c2c1b;
+}
+
+.urgent-callout .stack-list .list-card {
+  border-color: rgba(235, 106, 67, 0.35);
+  box-shadow: 0 12px 24px rgba(201, 74, 36, 0.12);
+}
+
+.urgent-banner {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid rgba(235, 106, 67, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #c74b2a;
+  box-shadow: 0 10px 20px rgba(201, 74, 36, 0.16);
+}
+
+.urgent-banner strong {
+  font-size: 0.75rem;
+  color: #7a2417;
+}
+
+@keyframes urgentPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.65;
+  }
+}

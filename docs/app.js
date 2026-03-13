@@ -3096,8 +3096,11 @@ async function renderNgoPage(route) {
     ? standardItems.map((item) => renderItemTile(item, "ngo", Object.fromEntries(route.params.entries()))).join("")
     : renderEmptyCard("No standard listings", "Try loosening your filters to see more inventory.");
   const listingMarkup = `
-        <div class="panel-head"><h2>Quick rescue listings</h2><p>High-urgency listings published in the quick rescue flow.</p></div>
-        <div class="stack-list">${quickRescueMarkup}</div>
+        <div class="urgent-callout">
+          <div class="urgent-banner"><span>Urgent pickup</span><strong>Quick rescue</strong></div>
+          <div class="panel-head"><h2>Quick rescue listings</h2><p>High-urgency listings published in the quick rescue flow.</p></div>
+          <div class="stack-list">${quickRescueMarkup}</div>
+        </div>
         <div class="panel-head compact"><h3>All other listings</h3><p>Standard inventory available for regular pickups.</p></div>
         <div class="stack-list">${standardMarkup}</div>
       `;
@@ -3197,8 +3200,11 @@ async function renderConsumerPage(route) {
     ? standardItems.map((item) => renderItemTile(item, "consumer", Object.fromEntries(route.params.entries()))).join("")
     : renderEmptyCard("No standard listings", "Try loosening your search or distance filters.");
   const listingMarkup = `
-        <div class="panel-head"><h2>Quick rescue listings</h2><p>High-urgency listings from quick rescue inventory.</p></div>
-        <div class="stack-list">${quickRescueMarkup}</div>
+        <div class="urgent-callout">
+          <div class="urgent-banner"><span>Urgent pickup</span><strong>Quick rescue</strong></div>
+          <div class="panel-head"><h2>Quick rescue listings</h2><p>High-urgency listings from quick rescue inventory.</p></div>
+          <div class="stack-list">${quickRescueMarkup}</div>
+        </div>
         <div class="panel-head compact"><h3>All other listings</h3><p>Standard inventory available for reservation.</p></div>
         <div class="stack-list">${standardMarkup}</div>
       `;
