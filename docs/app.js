@@ -114,6 +114,10 @@ function formatMoney(value) {
     : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
 }
 
+function isQuickRescueItem(item) {
+  return item && item.source === "quick_rescue";
+}
+
 const DEMO_IMAGE_MAX_DIMENSION = 960;
 const DEMO_IMAGE_QUALITY = 0.72;
 const DEMO_CERTIFICATE_PLACEHOLDER_PREFIX = "demo-certificate://";
@@ -385,6 +389,10 @@ function demoNormalizeStatus(value) {
     : "available";
 }
 
+function demoNormalizeItemSource(value) {
+  return ["inventory", "quick_rescue"].includes(value) ? value : "inventory";
+}
+
 function demoNormalizeCategory(value) {
   return value ? String(value).trim().slice(0, 60) : "Prepared Food";
 }
@@ -547,6 +555,7 @@ function createDemoSeed() {
       availableUntil: demoFutureHours(6),
       listingType: "free_public",
       audience: "both",
+      source: "quick_rescue",
       pricePerUnit: 0,
       status: "available",
       donorNotes: "Quick rescue listing from wedding event."
@@ -828,6 +837,7 @@ function buildDemoItemView(store, item, viewer = null) {
     availableUntil: item.availableUntil,
     listingType: item.listingType,
     audience: item.audience,
+    source: item.source || "inventory",
     pricePerUnit: item.pricePerUnit,
     status: item.status,
     donorNotes: item.donorNotes,
@@ -1365,6 +1375,7 @@ async function api(path, options = {}) {
     const pricePerUnit = priceRaw === "" || priceRaw === undefined || priceRaw === null ? 0 : demoToNumber(priceRaw, null);
     const availableFrom = demoToIsoOrNull(body.availableFrom) || demoNowIso();
     const availableUntil = demoToIsoOrNull(body.availableUntil);
+    const source = demoNormalizeItemSource(body.source || "inventory");
     if (!name) {
       throw new Error("Enter an item name.");
     }
@@ -1397,6 +1408,7 @@ async function api(path, options = {}) {
       availableUntil,
       listingType: demoNormalizeListingType(body.listingType),
       audience: demoNormalizeAudience(body.audience),
+      source,
       pricePerUnit,
       status: demoNormalizeStatus(body.status),
       donorNotes: String(body.donorNotes || "").trim(),
@@ -1431,6 +1443,7 @@ async function api(path, options = {}) {
     item.availableUntil = demoToIsoOrNull(body.availableUntil) || item.availableUntil;
     item.listingType = demoNormalizeListingType(body.listingType || item.listingType);
     item.audience = demoNormalizeAudience(body.audience || item.audience);
+    item.source = demoNormalizeItemSource(body.source || item.source || "inventory");
     item.pricePerUnit = demoToNumber(body.pricePerUnit, item.pricePerUnit);
     item.status = demoNormalizeStatus(body.status || item.status);
     item.donorNotes = String(body.donorNotes ?? item.donorNotes ?? "").trim();
@@ -3058,11 +3071,26 @@ async function renderNgoPage(route) {
   const sort = route.params.get("sort") || "";
   const response = await api(`/api/items?audience=ngo&search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}&expirationDays=${encodeURIComponent(expirationDays)}&distanceKm=${encodeURIComponent(distanceKm)}&sort=${encodeURIComponent(sort)}`);
 
+  const quickRescueItems = response.items.filter((item) => isQuickRescueItem(item));
+  const standardItems = response.items.filter((item) => !isQuickRescueItem(item));
+  const quickRescueMarkup = quickRescueItems.length
+    ? quickRescueItems.map((item) => renderItemTile(item, "ngo", Object.fromEntries(route.params.entries()))).join("")
+    : renderEmptyCard("No quick rescue listings", "Urgent pickups from quick rescue will show here.");
+  const standardMarkup = standardItems.length
+    ? standardItems.map((item) => renderItemTile(item, "ngo", Object.fromEntries(route.params.entries()))).join("")
+    : renderEmptyCard("No standard listings", "Try loosening your filters to see more inventory.");
+  const listingMarkup = `
+        <div class="panel-head"><h2>Quick rescue listings</h2><p>High-urgency listings published in the quick rescue flow.</p></div>
+        <div class="stack-list">${quickRescueMarkup}</div>
+        <div class="panel-head compact"><h3>All other listings</h3><p>Standard inventory available for regular pickups.</p></div>
+        <div class="stack-list">${standardMarkup}</div>
+      `;
+
   return renderShell(
     "ngo",
     "discover",
     "Discover provider inventory",
-    `${notificationMarkup}<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Search and filter</h2><p>Filter by category, expiry urgency, and distance if your profile has coordinates.</p></div><form class="stack-form" data-form="route-filter" data-role="ngo" data-page="discover"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><select name="category"><option value="">All categories</option>${renderOptionList(CATEGORY_OPTIONS, category)}</select></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${renderEmptyCard("Open a listing", "Press View details on any result to open the full item page and send a pickup request.")}</article><article class="panel-card"><div class="panel-head"><h2>Available listings</h2><p>Results update from live provider inventory.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "ngo", Object.fromEntries(route.params.entries()))).join("") : renderEmptyCard("No matches", "Try a wider expiry window or remove filters.")}</div></article></section>`
+    `${notificationMarkup}<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Search and filter</h2><p>Filter by category, expiry urgency, and distance if your profile has coordinates.</p></div><form class="stack-form" data-form="route-filter" data-role="ngo" data-page="discover"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><select name="category"><option value="">All categories</option>${renderOptionList(CATEGORY_OPTIONS, category)}</select></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${renderEmptyCard("Open a listing", "Press View details on any result to open the full item page and send a pickup request.")}</article><article class="panel-card">${listingMarkup}</article></section>`
   );
 }
 async function renderConsumerPage(route) {
@@ -3144,11 +3172,26 @@ async function renderConsumerPage(route) {
   const sort = route.params.get("sort") || "";
   const response = await api(`/api/items?audience=consumer&search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}&expirationDays=${encodeURIComponent(expirationDays)}&distanceKm=${encodeURIComponent(distanceKm)}&sort=${encodeURIComponent(sort)}`);
 
+  const quickRescueItems = response.items.filter((item) => isQuickRescueItem(item));
+  const standardItems = response.items.filter((item) => !isQuickRescueItem(item));
+  const quickRescueMarkup = quickRescueItems.length
+    ? quickRescueItems.map((item) => renderItemTile(item, "consumer", Object.fromEntries(route.params.entries()))).join("")
+    : renderEmptyCard("No quick rescue pickups", "Quick rescue listings will appear here when providers add them.");
+  const standardMarkup = standardItems.length
+    ? standardItems.map((item) => renderItemTile(item, "consumer", Object.fromEntries(route.params.entries()))).join("")
+    : renderEmptyCard("No standard listings", "Try loosening your search or distance filters.");
+  const listingMarkup = `
+        <div class="panel-head"><h2>Quick rescue listings</h2><p>High-urgency listings from quick rescue inventory.</p></div>
+        <div class="stack-list">${quickRescueMarkup}</div>
+        <div class="panel-head compact"><h3>All other listings</h3><p>Standard inventory available for reservation.</p></div>
+        <div class="stack-list">${standardMarkup}</div>
+      `;
+
   return renderShell(
     "consumer",
     "browse",
     "Browse surplus food",
-    `${notificationMarkup}<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Filters</h2><p>Browse free or priced items and open any listing to see full pickup details before adding it to cart.</p></div><form class="stack-form" data-form="route-filter" data-role="consumer" data-page="browse"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><select name="category"><option value="">All categories</option>${renderOptionList(CATEGORY_OPTIONS, category)}</select></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${renderEmptyCard("Open a listing", "Press View details on any result to open the full item page and add it to your cart.")}</article><article class="panel-card"><div class="panel-head"><h2>Available food</h2><p>Free items are marked accordingly. Paid items stay in a reserve-only checkout flow.</p></div><div class="stack-list">${response.items.length ? response.items.map((item) => renderItemTile(item, "consumer", Object.fromEntries(route.params.entries()))).join("") : renderEmptyCard("No items found", "Try loosening your search or distance filters.")}</div></article></section>`
+    `${notificationMarkup}<section class="content-grid two-pane"><article class="panel-card"><div class="panel-head"><h2>Filters</h2><p>Browse free or priced items and open any listing to see full pickup details before adding it to cart.</p></div><form class="stack-form" data-form="route-filter" data-role="consumer" data-page="browse"><div class="two-column"><label><span>Search</span><input name="search" value="${escapeHtml(search)}" /></label><label><span>Category</span><select name="category"><option value="">All categories</option>${renderOptionList(CATEGORY_OPTIONS, category)}</select></label></div><div class="three-column"><label><span>Expiry window (days)</span><input name="expirationDays" type="number" min="1" value="${escapeHtml(expirationDays)}" /></label><label><span>Distance (km)</span><input name="distanceKm" type="number" min="1" value="${escapeHtml(distanceKm)}" /></label><label><span>Sort</span><select name="sort"><option value="">Soonest expiry</option><option value="closest" ${sort === "closest" ? "selected" : ""}>Closest</option><option value="quantity" ${sort === "quantity" ? "selected" : ""}>Largest quantity</option></select></label></div><button class="ghost-button" type="submit">Apply filters</button></form>${renderEmptyCard("Open a listing", "Press View details on any result to open the full item page and add it to your cart.")}</article><article class="panel-card">${listingMarkup}</article></section>`
   );
 }
 async function renderRoute() {

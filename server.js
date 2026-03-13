@@ -86,6 +86,10 @@ function normalizeItemStatus(value) {
     : "available";
 }
 
+function normalizeItemSource(value) {
+  return ["inventory", "quick_rescue"].includes(value) ? value : "inventory";
+}
+
 function normalizeCategory(value) {
   return value ? String(value).trim().slice(0, 60) : "Prepared Food";
 }
@@ -231,6 +235,7 @@ function openDatabase() {
       available_until TEXT,
       listing_type TEXT NOT NULL DEFAULT 'donation',
       audience TEXT NOT NULL DEFAULT 'ngo',
+      source TEXT NOT NULL DEFAULT 'inventory',
       price_per_unit REAL NOT NULL DEFAULT 0,
       status TEXT NOT NULL DEFAULT 'available',
       donor_notes TEXT,
@@ -352,6 +357,12 @@ function openDatabase() {
   }
 
   try {
+    db.exec("ALTER TABLE items ADD COLUMN source TEXT");
+  } catch (_error) {
+    // Column already exists.
+  }
+
+  try {
     db.exec("ALTER TABLE users ADD COLUMN certificate_url TEXT");
   } catch (_error) {
     // Column already exists.
@@ -406,12 +417,13 @@ function insertItem(db, item) {
       available_until,
       listing_type,
       audience,
+      source,
       price_per_unit,
       status,
       donor_notes,
       image_url,
       barcode_image_url
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const result = statement.run(
@@ -430,6 +442,7 @@ function insertItem(db, item) {
     item.availableUntil,
     item.listingType,
     item.audience,
+    item.source,
     item.pricePerUnit,
     item.status || "available",
     item.donorNotes || null,
@@ -779,6 +792,7 @@ function mapItemRow(row, viewer = null) {
     availableUntil: row.available_until,
     listingType: row.listing_type,
     audience: row.audience,
+    source: row.source || "inventory",
     pricePerUnit: row.price_per_unit,
     status: row.status,
     donorNotes: row.donor_notes,
@@ -1563,6 +1577,7 @@ addRoute("POST", /^\/api\/items$/, async (req, res, db) => {
   const pricePerUnit = priceRaw === "" || priceRaw === undefined || priceRaw === null ? 0 : toNumber(priceRaw, null);
   const availableFrom = toIsoOrNull(body.availableFrom) || nowIso();
   const availableUntil = toIsoOrNull(body.availableUntil);
+  const source = normalizeItemSource(body.source || "inventory");
 
   if (!name) {
     return sendError(res, 400, "Enter an item name.");
@@ -1596,6 +1611,7 @@ addRoute("POST", /^\/api\/items$/, async (req, res, db) => {
     availableUntil,
     listingType: normalizeListingType(body.listingType),
     audience: normalizeAudience(body.audience),
+    source,
     pricePerUnit,
     status: normalizeItemStatus(body.status),
     donorNotes: String(body.donorNotes || "").trim(),
@@ -1640,6 +1656,7 @@ addRoute("PUT", /^\/api\/items\/(\d+)$/, async (req, res, db, match) => {
       available_until = ?,
       listing_type = ?,
       audience = ?,
+      source = ?,
       price_per_unit = ?,
       status = ?,
       donor_notes = ?,
@@ -1662,6 +1679,7 @@ addRoute("PUT", /^\/api\/items\/(\d+)$/, async (req, res, db, match) => {
     toIsoOrNull(body.availableUntil) || existing.available_until,
     normalizeListingType(body.listingType || existing.listing_type),
     normalizeAudience(body.audience || existing.audience),
+    normalizeItemSource(body.source || existing.source || "inventory"),
     toNumber(body.pricePerUnit, existing.price_per_unit),
     normalizeItemStatus(body.status || existing.status),
     String(body.donorNotes ?? existing.donor_notes ?? "").trim(),

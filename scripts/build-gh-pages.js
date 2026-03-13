@@ -62,6 +62,10 @@ function demoNormalizeStatus(value) {
     : "available";
 }
 
+function demoNormalizeItemSource(value) {
+  return ["inventory", "quick_rescue"].includes(value) ? value : "inventory";
+}
+
 function demoNormalizeCategory(value) {
   return value ? String(value).trim().slice(0, 60) : "Prepared Food";
 }
@@ -224,6 +228,7 @@ function createDemoSeed() {
       availableUntil: demoFutureHours(6),
       listingType: "free_public",
       audience: "both",
+      source: "quick_rescue",
       pricePerUnit: 0,
       status: "available",
       donorNotes: "Quick rescue listing from wedding event."
@@ -505,6 +510,7 @@ function buildDemoItemView(store, item, viewer = null) {
     availableUntil: item.availableUntil,
     listingType: item.listingType,
     audience: item.audience,
+    source: item.source || "inventory",
     pricePerUnit: item.pricePerUnit,
     status: item.status,
     donorNotes: item.donorNotes,
@@ -1042,6 +1048,7 @@ async function api(path, options = {}) {
     const pricePerUnit = priceRaw === "" || priceRaw === undefined || priceRaw === null ? 0 : demoToNumber(priceRaw, null);
     const availableFrom = demoToIsoOrNull(body.availableFrom) || demoNowIso();
     const availableUntil = demoToIsoOrNull(body.availableUntil);
+    const source = demoNormalizeItemSource(body.source || "inventory");
     if (!name) {
       throw new Error("Enter an item name.");
     }
@@ -1074,6 +1081,7 @@ async function api(path, options = {}) {
       availableUntil,
       listingType: demoNormalizeListingType(body.listingType),
       audience: demoNormalizeAudience(body.audience),
+      source,
       pricePerUnit,
       status: demoNormalizeStatus(body.status),
       donorNotes: String(body.donorNotes || "").trim(),
@@ -1108,6 +1116,7 @@ async function api(path, options = {}) {
     item.availableUntil = demoToIsoOrNull(body.availableUntil) || item.availableUntil;
     item.listingType = demoNormalizeListingType(body.listingType || item.listingType);
     item.audience = demoNormalizeAudience(body.audience || item.audience);
+    item.source = demoNormalizeItemSource(body.source || item.source || "inventory");
     item.pricePerUnit = demoToNumber(body.pricePerUnit, item.pricePerUnit);
     item.status = demoNormalizeStatus(body.status || item.status);
     item.donorNotes = String(body.donorNotes ?? item.donorNotes ?? "").trim();
