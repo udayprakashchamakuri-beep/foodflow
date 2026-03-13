@@ -2393,6 +2393,56 @@ h4,
   }
 }
 
+.showcase-illustration,
+.image-home-stat-icon {
+  display: inline-grid;
+  place-items: center;
+}
+
+.showcase-illustration svg {
+  width: 4rem;
+  height: 4rem;
+}
+
+.image-home-stat-icon svg {
+  width: 3.35rem;
+  height: 3.35rem;
+}
+
+.image-home-workflow-board {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.workflow-card.simple-card {
+  min-height: 10.5rem;
+  justify-items: center;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 12px 22px rgba(30, 39, 35, 0.05);
+}
+
+.workflow-card.simple-card h3 {
+  font-size: 1.05rem;
+}
+
+.workflow-card.simple-card p {
+  max-width: 18rem;
+}
+
+.workflow-number,
+.workflow-card-icon,
+.showcase-emoji {
+  display: none !important;
+}
+
+.image-home-secondary-grid {
+  grid-template-columns: 1fr;
+}
+
+#current-demos {
+  scroll-margin-top: 8rem;
+}
+
 
 .pages-demo-badge {
   position: fixed;

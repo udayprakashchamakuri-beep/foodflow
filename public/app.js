@@ -556,7 +556,7 @@ function renderTopbar() {
         <nav class="guest-nav-links" aria-label="Home sections">
           <button class="nav-link-button" type="button" data-action="scroll-home" data-target="impact-boards-section">Impact</button>
           <button class="nav-link-button" type="button" data-action="scroll-home" data-target="workflow-detail-section">How It Works</button>
-          <button class="nav-link-button" type="button" data-action="scroll-home" data-target="demo-section">Demo</button>
+          <button class="nav-link-button" type="button" data-action="scroll-home" data-target="current-demos" data-mode="login">Demo</button>
           <button class="nav-link-button" type="button" data-action="scroll-home" data-target="auth-panel" data-mode="register">Join Us</button>
         </nav>
       `;
@@ -991,26 +991,40 @@ function formatHomeHighlight(value) {
   return `${Number(value || 0).toLocaleString("en-IN")}+`;
 }
 
+function renderHomeIcon(kind) {
+  const icons = {
+    restaurant: '<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="24" width="36" height="24" rx="4" fill="#fff7ec" stroke="#2f4f3d" stroke-width="2"/><path d="M18 24V16m8 8V14m8 10V16m8 8V13" stroke="#2f4f3d" stroke-width="2.2" stroke-linecap="round"/><path d="M16 34h32" stroke="#ef8b3a" stroke-width="2.4"/><circle cx="26" cy="39" r="3" fill="#69bf88"/><circle cx="38" cy="39" r="3" fill="#ef8b3a"/></svg>',
+    grocery: '<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="18" width="40" height="30" rx="4" fill="#fffdf7" stroke="#2f4f3d" stroke-width="2"/><path d="M20 26h24M20 33h24M20 40h24" stroke="#69bf88" stroke-width="2.6" stroke-linecap="round"/><path d="M18 18l4-8h20l4 8" fill="#f7d8b2" stroke="#2f4f3d" stroke-width="2"/></svg>',
+    storefront: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 24h36v24H14z" fill="#fffaf0" stroke="#2f4f3d" stroke-width="2"/><path d="M12 24l4-10h32l4 10" fill="#ef8b3a" stroke="#2f4f3d" stroke-width="2"/><path d="M20 34h10v14H20z" fill="#69bf88" opacity="0.35" stroke="#2f4f3d" stroke-width="2"/><path d="M34 30h10v8H34z" fill="#f7d8b2" stroke="#2f4f3d" stroke-width="2"/></svg>',
+    ngo: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M12 46c5-8 12-12 20-12s15 4 20 12" fill="#eef7f1" stroke="#2f4f3d" stroke-width="2"/><circle cx="22" cy="26" r="6" fill="#f7d8b2" stroke="#2f4f3d" stroke-width="2"/><circle cx="42" cy="26" r="6" fill="#f7d8b2" stroke="#2f4f3d" stroke-width="2"/><path d="M32 20l3 6 7 1-5 5 1 7-6-4-6 4 1-7-5-5 7-1z" fill="#69bf88" stroke="#2f4f3d" stroke-width="1.6"/></svg>',
+    meals: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 42c0-9 6-16 14-16s14 7 14 16" fill="#fff8ef" stroke="#2f4f3d" stroke-width="2"/><path d="M20 42h24" stroke="#2f4f3d" stroke-width="2"/><circle cx="28" cy="32" r="4" fill="#69bf88"/><circle cx="36" cy="29" r="3.5" fill="#ef8b3a"/><path d="M46 18v20" stroke="#2f4f3d" stroke-width="2.2" stroke-linecap="round"/><path d="M50 18v20" stroke="#2f4f3d" stroke-width="2.2" stroke-linecap="round"/><path d="M48 42v8" stroke="#2f4f3d" stroke-width="2.2" stroke-linecap="round"/></svg>',
+    ngos: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 48v-8M32 48V30M46 48v-8" stroke="#2f4f3d" stroke-width="2.2" stroke-linecap="round"/><circle cx="18" cy="28" r="6" fill="#69bf88" opacity="0.85" stroke="#2f4f3d" stroke-width="2"/><circle cx="32" cy="20" r="7" fill="#ef8b3a" opacity="0.82" stroke="#2f4f3d" stroke-width="2"/><circle cx="46" cy="28" r="6" fill="#69bf88" opacity="0.55" stroke="#2f4f3d" stroke-width="2"/></svg>',
+    providers: '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="24" cy="24" r="8" fill="#69bf88" opacity="0.88" stroke="#2f4f3d" stroke-width="2"/><path d="M16 48c2-7 8-11 14-11s12 4 14 11" fill="#eef7f1" stroke="#2f4f3d" stroke-width="2"/><circle cx="46" cy="40" r="8" fill="#ef8b3a" opacity="0.88" stroke="#2f4f3d" stroke-width="2"/><path d="M46 36v8M42 40h8" stroke="#2f4f3d" stroke-width="2.2" stroke-linecap="round"/></svg>'
+  };
+
+  return icons[kind] || '';
+}
+
 function renderHomeShowcaseVisual() {
   return `
     <div class="image-home-visual" aria-hidden="true">
       <article class="showcase-tile tile-kitchen">
-        <span class="showcase-emoji">??</span>
+        <span class="showcase-illustration">${renderHomeIcon("restaurant")}</span>
         <strong>Restaurant</strong>
         <small>Fresh surplus meals</small>
       </article>
       <article class="showcase-tile tile-grocery">
-        <span class="showcase-emoji">??</span>
+        <span class="showcase-illustration">${renderHomeIcon("grocery")}</span>
         <strong>Grocery</strong>
         <small>Near-expiry stock</small>
       </article>
       <article class="showcase-tile tile-shelf">
-        <span class="showcase-emoji">??</span>
+        <span class="showcase-illustration">${renderHomeIcon("storefront")}</span>
         <strong>Storefront</strong>
         <small>Live pickup point</small>
       </article>
       <article class="showcase-tile tile-ngo">
-        <span class="showcase-emoji">??</span>
+        <span class="showcase-illustration">${renderHomeIcon("ngo")}</span>
         <strong>NGO</strong>
         <small>Distribution network</small>
       </article>
@@ -1029,9 +1043,9 @@ function renderHomeShowcaseVisual() {
 
 function renderHomeSnapshotCards(data) {
   const cards = [
-    { label: "Meals Rescued", value: formatHomeHighlight(data.stats.totalUnitsSaved), icon: "??" },
-    { label: "NGOs Connected", value: formatHomeHighlight(data.stats.totalNgos), icon: "??" },
-    { label: "Providers Onboarded", value: formatHomeHighlight(data.stats.totalProviders), icon: "??" }
+    { label: "Meals Rescued", value: formatHomeHighlight(data.stats.totalUnitsSaved), icon: "meals" },
+    { label: "NGOs Connected", value: formatHomeHighlight(data.stats.totalNgos), icon: "ngos" },
+    { label: "Providers Onboarded", value: formatHomeHighlight(data.stats.totalProviders), icon: "providers" }
   ];
 
   return `
@@ -1044,7 +1058,7 @@ function renderHomeSnapshotCards(data) {
                 <span>${escapeHtml(card.label)}:</span>
                 <strong>${escapeHtml(card.value)}</strong>
               </div>
-              <span class="image-home-stat-icon">${escapeHtml(card.icon)}</span>
+              <span class="image-home-stat-icon">${renderHomeIcon(card.icon)}</span>
             </article>
           `
         )
@@ -1055,20 +1069,14 @@ function renderHomeSnapshotCards(data) {
 function renderHomeWorkflowCards(layout = "compact") {
   const steps = [
     {
-      number: "01",
-      icon: "UP",
       title: "Provider uploads surplus food",
       description: "Providers create a quick rescue or inventory listing with expiry, quantity, and pickup details."
     },
     {
-      number: "02",
-      icon: "RQ",
       title: "NGO or consumer requests it",
       description: "Nearby NGOs and consumers discover the listing, open the detail page, and request what they can collect."
     },
     {
-      number: "03",
-      icon: "PK",
       title: "Pickup and distribution",
       description: "Providers approve the handoff, teams coordinate pickup, and the rescue outcome appears in the impact dashboards."
     }
@@ -1079,9 +1087,7 @@ function renderHomeWorkflowCards(layout = "compact") {
       ${steps
         .map(
           (step, index) => `
-            <article class="workflow-card ${escapeHtml(layout)}">
-              <span class="workflow-number">${escapeHtml(step.number)}</span>
-              <span class="workflow-card-icon">${escapeHtml(step.icon)}</span>
+            <article class="workflow-card ${escapeHtml(layout)} simple-card">
               <h3>${escapeHtml(step.title)}</h3>
               <p>${escapeHtml(step.description)}</p>
             </article>
@@ -1092,7 +1098,6 @@ function renderHomeWorkflowCards(layout = "compact") {
     </div>
   `;
 }
-
 function renderDemoAccessCards() {
   const cards = [
     { key: "provider_restaurant", label: "Provider", account: DEMO_ACCOUNTS.provider_restaurant },
@@ -1205,15 +1210,6 @@ function renderHomePage(data) {
         </section>
 
         <section class="image-home-secondary-grid">
-          <article class="panel-card" id="demo-section">
-            <div class="panel-head image-home-centered-head">
-              <div>
-                <h2>Live Demo</h2>
-                <p>Quick role-based access for walkthroughs and judging.</p>
-              </div>
-            </div>
-            ${renderDemoAccessCards()}
-          </article>
           <article class="panel-card" id="impact-boards-section">
             <div class="panel-head image-home-centered-head">
               <div>
@@ -1303,7 +1299,7 @@ function renderHomePage(data) {
                 </label>
                 <button class="primary-button" type="submit">Sign in</button>
               </form>
-              <div class="demo-panel home-demo-panel">
+              <div class="demo-panel home-demo-panel" id="current-demos">
                 <h4>Additional demo access</h4>
                 <button class="ghost-button" data-action="demo-login" data-role="provider_restaurant">Restaurant provider demo</button>
                 <button class="ghost-button" data-action="demo-login" data-role="provider_grocery">Grocery provider demo</button>
