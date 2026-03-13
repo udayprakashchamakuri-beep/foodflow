@@ -1518,7 +1518,7 @@ async function api(path, options = {}) {
     const nextStatus = String(body.status || "").trim();
     const allowed = user.role === "provider"
       ? ["approved", "rejected", "fulfilled", "delivered"]
-      : ["cancelled"];
+      : ["cancelled", "delivered"];
     if (!allowed.includes(nextStatus)) {
       throw new Error("Invalid request status transition.");
     }
@@ -2307,6 +2307,10 @@ function renderRequestActions(request, role) {
 
   if (role === "ngo" && request.status === "pending") {
     return `<div class="card-actions"><button class="ghost-button" data-action="request-status" data-request-id="${request.id}" data-status="cancelled">Cancel request</button></div>`;
+  }
+
+  if (role === "ngo" && (request.status === "approved" || request.status === "fulfilled")) {
+    return `<div class="card-actions"><button class="ghost-button" data-action="request-status" data-request-id="${request.id}" data-status="delivered">Mark collected</button></div>`;
   }
 
   return "";

@@ -1773,7 +1773,7 @@ addRoute("PATCH", /^\/api\/requests\/(\d+)$/, async (req, res, db, match) => {
 
   const nextStatus = String(body.status || "").trim();
   const allowedForProvider = ["approved", "rejected", "fulfilled", "delivered"];
-  const allowedForNgo = ["cancelled"];
+  const allowedForNgo = ["cancelled", "delivered"];
   const allowedStatuses = user.role === "provider" ? allowedForProvider : allowedForNgo;
   if (!allowedStatuses.includes(nextStatus)) {
     return sendError(res, 400, "Invalid request status transition.");

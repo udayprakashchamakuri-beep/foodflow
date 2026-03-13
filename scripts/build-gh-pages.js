@@ -1195,7 +1195,7 @@ async function api(path, options = {}) {
     const nextStatus = String(body.status || "").trim();
     const allowed = user.role === "provider"
       ? ["approved", "rejected", "fulfilled", "delivered"]
-      : ["cancelled"];
+      : ["cancelled", "delivered"];
     if (!allowed.includes(nextStatus)) {
       throw new Error("Invalid request status transition.");
     }
