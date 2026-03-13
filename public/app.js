@@ -1553,6 +1553,7 @@ async function renderProviderPage(route) {
   }
 
   if (route.page === "availability") {
+    const search = route.params.get("search") || "";
     const response = await api("/api/items?scope=mine");
     return renderShell(
       "provider",
@@ -1573,6 +1574,7 @@ async function renderProviderPage(route) {
     );
   }
 
+  const search = route.params.get("search") || "";
   const itemsResponse = await api("/api/items?scope=mine");
   const requestsResponse = await api("/api/requests");
   const note = state.me.businessType === "banquet" ? "Banquet mode: quick-donate free surplus before it expires." : "Use this quick form for one-off rescue listings or public free items.";
