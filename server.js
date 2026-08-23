@@ -3,11 +3,14 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { DatabaseSync } = require("node:sqlite");
+const { getImpactAnalytics } = require("./lib/analytics");
+const { runExpirySweep, scheduleExpirySweep } = require("./lib/expiry");
+const { getWasteRiskForProvider, getRecommendations } = require("./lib/ml");
 
 const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
-const DATA_DIR = path.join(ROOT_DIR, "data");
-const DB_PATH = path.join(DATA_DIR, "foodflow.sqlite");
+const DATA_DIR = process.env.DATA_DIR || path.join(ROOT_DIR, "data");
+const DB_PATH = process.env.DB_PATH || path.join(DATA_DIR, "foodflow.sqlite");
 const SESSION_COOKIE = "foodflow_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 const PORT = Number(process.env.PORT || 3000);
@@ -442,7 +445,7 @@ function insertItem(db, item) {
     item.availableUntil,
     item.listingType,
     item.audience,
-    item.source,
+    item.source || "inventory",
     item.pricePerUnit,
     item.status || "available",
     item.donorNotes || null,
@@ -1479,7 +1482,11 @@ addRoute("GET", /^\/api\/dashboard$/, async (req, res, db) => {
 });
 
 addRoute("GET", /^\/api\/notifications$/, async (req, res, db) => {
-  const user = requireUser(db, req, res, ["ngo", "consumer"]);
+  // Providers need this too: the expiry-automation sweep (lib/expiry.js)
+  // writes "listing expiring soon" alerts with the provider as recipient,
+  // so this endpoint has to be reachable by all three roles, not just
+  // ngo/consumer (who get the separate "nearby quick rescue" alerts).
+  const user = requireUser(db, req, res, ["provider", "ngo", "consumer"]);
   if (!user) {
     return;
   }
@@ -2091,6 +2098,48 @@ addRoute("PATCH", /^\/api\/reservations\/(\d+)$/, async (req, res, db, match) =>
   const reservations = getReservationsForUser(db, getUserById(db, user.id));
   sendJson(res, 200, { reservation: reservations.find((entry) => entry.id === reservationId) });
 });
+
+addRoute("GET", /^\/api\/analytics\/impact$/, async (req, res, db) => {
+  const user = requireUser(db, req, res);
+  if (!user) {
+    return;
+  }
+
+  sendJson(res, 200, getImpactAnalytics(db));
+});
+
+addRoute("GET", /^\/api\/ml\/waste-risk$/, async (req, res, db) => {
+  const user = requireUser(db, req, res, ["provider"]);
+  if (!user) {
+    return;
+  }
+
+  sendJson(res, 200, getWasteRiskForProvider(db, user.id));
+});
+
+addRoute("GET", /^\/api\/recommendations$/, async (req, res, db) => {
+  const user = requireUser(db, req, res, ["ngo", "consumer"]);
+  if (!user) {
+    return;
+  }
+
+  sendJson(res, 200, getRecommendations(db, user));
+});
+
+addRoute("POST", /^\/api\/maintenance\/expiry-sweep$/, async (req, res, db) => {
+  // Any authenticated user can trigger this manually (there is no admin
+  // role in this MVP); a real deployment would restrict this to an admin
+  // role or a signed cron/worker request instead of the general user pool.
+  // It also runs automatically on a timer -- see scheduleExpirySweep below --
+  // this endpoint exists so the behaviour can be demonstrated on demand.
+  const user = requireUser(db, req, res);
+  if (!user) {
+    return;
+  }
+
+  sendJson(res, 200, runExpirySweep(db));
+});
+
 async function handleApi(req, res, db) {
   const pathname = new URL(req.url, "http://localhost").pathname;
 
@@ -2137,6 +2186,7 @@ function serveStaticFile(req, res) {
 
 function createAppServer() {
   const db = openDatabase();
+  scheduleExpirySweep(db);
 
   return http.createServer(async (req, res) => {
     if (!req.url) {

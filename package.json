@@ -7,6 +7,10 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "smoke": "node scripts/smoke-test.js",
-    "build:pages": "node scripts/build-gh-pages.js"
+    "build:pages": "node scripts/build-gh-pages.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22.5.0"
   }
 }

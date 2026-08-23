@@ -3,7 +3,8 @@ const state = {
   me: null,
   flash: null,
   authMode: "register",
-  shortcutsOpen: false
+  shortcutsOpen: false,
+  impactChartData: null
 };
 
 const motion = {
@@ -17,20 +18,23 @@ const NAV_ITEMS = {
     ["inventory", "Inventory"],
     ["availability", "Availability"],
     ["network", "Food providers nearby"],
-    ["trash", "Quick rescue"]
+    ["trash", "Quick rescue"],
+    ["impact", "Impact & Insights"]
   ],
   ngo: [
     ["home", "Home"],
     ["discover", "Discover"],
     ["requests", "Requests"],
-    ["history", "History"]
+    ["history", "History"],
+    ["impact", "Impact & Insights"]
   ],
   consumer: [
     ["home", "Home"],
     ["browse", "Browse"],
     ["cart", "Cart"],
     ["checkout", "Checkout"],
-    ["orders", "Orders"]
+    ["orders", "Orders"],
+    ["impact", "Impact & Insights"]
   ]
 };
 
@@ -1525,14 +1529,146 @@ function renderProviderInventory(items, editItem, route) {
   `;
 }
 
+function riskBadgeClass(label) {
+  return { high: "badge-rejected", medium: "badge-pending", low: "badge-available" }[label] || "badge";
+}
+
+async function renderImpactSection(role) {
+  const analytics = await api("/api/analytics/impact");
+  let riskData = null;
+  let recommendations = null;
+
+  if (role === "provider") {
+    riskData = await api("/api/ml/waste-risk");
+  } else {
+    recommendations = await api("/api/recommendations");
+  }
+
+  state.impactChartData = analytics;
+
+  const metrics = renderMetricGrid({
+    "Units rescued": analytics.totals.totalUnitsSaved,
+    "Est. kg saved": analytics.totals.estimatedKgSaved,
+    "Est. CO2 avoided (kg)": analytics.totals.estimatedCo2SavedKg,
+    "Meals equivalent": analytics.totals.estimatedMealsEquivalent
+  });
+
+  const chartsSection = `
+    <section class="content-grid two-pane">
+      <article class="panel-card">
+        <div class="panel-head"><h2>Rescue trend</h2><p>Units rescued per day across the whole platform.</p></div>
+        <canvas id="impact-trend-chart" height="220"></canvas>
+      </article>
+      <article class="panel-card">
+        <div class="panel-head"><h2>Category breakdown</h2><p>Where the rescued food is coming from.</p></div>
+        <canvas id="impact-category-chart" height="220"></canvas>
+      </article>
+    </section>
+  `;
+
+  const leaderboardSection = `
+    <section class="content-grid two-pane">
+      <article class="panel-card">
+        <div class="panel-head"><h2>Top providers</h2><p>Ranked by total units rescued.</p></div>
+        <div class="stack-list">${analytics.topProviders.length ? analytics.topProviders.map((row) => `<article class="list-card atmospheric-card"><div class="list-card-head"><div><h3>${escapeHtml(row.name)}</h3><p>${escapeHtml(String(row.transactions))} transactions</p></div><strong>${escapeHtml(String(row.units))} units</strong></div></article>`).join("") : renderEmptyCard("No data yet", "Top providers will appear once transactions start flowing.")}</div>
+      </article>
+      <article class="panel-card">
+        <div class="panel-head"><h2>Top NGOs</h2><p>Ranked by total units received.</p></div>
+        <div class="stack-list">${analytics.topNgos.length ? analytics.topNgos.map((row) => `<article class="list-card atmospheric-card"><div class="list-card-head"><div><h3>${escapeHtml(row.name)}</h3><p>${escapeHtml(String(row.transactions))} transactions</p></div><strong>${escapeHtml(String(row.units))} units</strong></div></article>`).join("") : renderEmptyCard("No data yet", "Top NGOs will appear once donations are delivered.")}</div>
+      </article>
+    </section>
+  `;
+
+  let roleSection = "";
+
+  if (role === "provider") {
+    const modelNote = riskData.modelType === "trained-logistic-regression"
+      ? `Trained on ${riskData.trainingExamples} resolved listings from platform history.`
+      : `Using a rule-based estimate until at least 8 resolved listings with mixed outcomes exist (currently ${riskData.trainingExamples}). It will switch to the trained model automatically.`;
+
+    roleSection = `
+      <section class="panel-card">
+        <div class="panel-head"><h2>Waste-risk radar</h2><p>${escapeHtml(modelNote)}</p></div>
+        <div class="stack-list">${riskData.items.length ? riskData.items.map((item) => `<article class="list-card atmospheric-card"><div class="list-card-head"><div><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.category)}</p></div><span class="badge ${riskBadgeClass(item.riskLabel)}">${escapeHtml(item.riskLabel)} risk - ${Math.round(item.riskScore * 100)}%</span></div></article>`).join("") : renderEmptyCard("No active listings", "Add inventory to see waste-risk predictions.")}</div>
+      </section>
+    `;
+  } else {
+    const historyNote = recommendations.hasHistory
+      ? "Ranked using your past request/reservation categories, pickup urgency, and distance."
+      : "No history yet, so this is ranked by pickup urgency and distance until you build a pattern.";
+
+    roleSection = `
+      <section class="panel-card">
+        <div class="panel-head"><h2>Recommended for you</h2><p>${escapeHtml(historyNote)}</p></div>
+        <div class="stack-list">${recommendations.items.length ? recommendations.items.map((item) => `<a class="list-card atmospheric-card" href="${buildHash(role, "detail", { item: item.id, from: "impact" })}"><div class="list-card-head"><div><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.reason)}</p></div><strong>${Math.round(item.matchScore * 100)}% match</strong></div><div class="meta-row"><span>${escapeHtml(item.category)}</span><span>${formatQty(item.quantityAvailable, item.unit)}</span>${item.distanceKm !== null ? `<span>${escapeHtml(String(item.distanceKm))} km away</span>` : ""}</div></a>`).join("") : renderEmptyCard("No matches right now", "Check back as new listings are posted.")}</div>
+      </section>
+    `;
+  }
+
+  return `${metrics}${chartsSection}${leaderboardSection}${roleSection}`;
+}
+
+function mountImpactCharts() {
+  const data = state.impactChartData;
+  if (!data || typeof Chart === "undefined") {
+    return;
+  }
+
+  const trendCanvas = document.getElementById("impact-trend-chart");
+  if (trendCanvas) {
+    if (trendCanvas._chartInstance) {
+      trendCanvas._chartInstance.destroy();
+    }
+    trendCanvas._chartInstance = new Chart(trendCanvas, {
+      type: "line",
+      data: {
+        labels: data.trend.map((row) => row.day),
+        datasets: [{
+          label: "Units rescued",
+          data: data.trend.map((row) => row.units),
+          borderColor: "#218d64",
+          backgroundColor: "rgba(33, 141, 100, 0.15)",
+          tension: 0.35,
+          fill: true
+        }]
+      },
+      options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+  }
+
+  const categoryCanvas = document.getElementById("impact-category-chart");
+  if (categoryCanvas) {
+    if (categoryCanvas._chartInstance) {
+      categoryCanvas._chartInstance.destroy();
+    }
+    categoryCanvas._chartInstance = new Chart(categoryCanvas, {
+      type: "doughnut",
+      data: {
+        labels: data.categoryBreakdown.map((row) => row.category),
+        datasets: [{
+          data: data.categoryBreakdown.map((row) => row.units),
+          backgroundColor: ["#218d64", "#b77f1e", "#3f7cd6", "#b84a36", "#8a5cd6", "#4aa3a2"]
+        }]
+      },
+      options: { responsive: true }
+    });
+  }
+}
+
 async function renderProviderPage(route) {
+  if (route.page === "impact") {
+    return renderShell("provider", "impact", "Impact & Insights", await renderImpactSection("provider"));
+  }
+
   if (route.page === "home") {
     const dashboard = await api("/api/dashboard");
+    const notificationsResponse = await api("/api/notifications");
+    const notificationMarkup = renderNotificationFeed(notificationsResponse.notifications, "provider");
     return renderShell(
       "provider",
       "home",
       "Provider overview",
-      `${renderMetricGrid({
+      `${notificationMarkup}${renderMetricGrid({
         "Active listings": dashboard.metrics.activeListings,
         "Pending NGO requests": dashboard.metrics.pendingRequests,
         "Reserved consumer orders": dashboard.metrics.reservedOrders,
@@ -1617,6 +1753,10 @@ async function renderProviderPage(route) {
 }
 
 async function renderNgoPage(route) {
+  if (route.page === "impact") {
+    return renderShell("ngo", "impact", "Impact & Insights", await renderImpactSection("ngo"));
+  }
+
   const notificationsResponse = await api("/api/notifications");
   const notificationMarkup = renderNotificationFeed(notificationsResponse.notifications, "ngo");
   if (route.page === "home") {
@@ -1700,6 +1840,10 @@ async function renderNgoPage(route) {
   );
 }
 async function renderConsumerPage(route) {
+  if (route.page === "impact") {
+    return renderShell("consumer", "impact", "Impact & Insights", await renderImpactSection("consumer"));
+  }
+
   const notificationsResponse = await api("/api/notifications");
   const notificationMarkup = renderNotificationFeed(notificationsResponse.notifications, "consumer");
   if (route.page === "home") {
@@ -1839,8 +1983,7 @@ async function renderRoute() {
   syncPickupPointFields();
   hydrateVisualEnhancements();
   focusShortcutDialogIfNeeded();
-
-
+  mountImpactCharts();
 }
 
 function hydrateVisualEnhancements() {
